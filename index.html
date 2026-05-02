@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Forgotten Cycle AI Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app" aria-labelledby="title">
+      <section class="status-panel">
+        <div>
+          <p class="eyebrow">Playable slice</p>
+          <h1 id="title">Forgotten Cycle</h1>
+        </div>
+        <div class="cycle-badge">
+          <span>Cycle</span>
+          <strong id="cycle">1</strong>
+        </div>
+      </section>
+
+      <section class="life-panel" aria-label="Current life">
+        <div class="job-row">
+          <div>
+            <h2>Gather Driftwood</h2>
+            <p id="rate">1 progress / second</p>
+          </div>
+          <button id="workButton" type="button">Work</button>
+        </div>
+
+        <div class="meter" aria-label="Life progress">
+          <div id="progressBar" class="meter-fill"></div>
+        </div>
+        <div class="meter-copy">
+          <span id="progressText">0 / 10</span>
+          <span id="goalText">Reach the signal fire</span>
+        </div>
+      </section>
+
+      <section class="actions-panel" aria-label="Cycle actions">
+        <button id="resetButton" type="button" disabled>Begin Next Cycle</button>
+        <button id="upgradeButton" type="button" disabled>Spend Memory: Faster Hands</button>
+      </section>
+
+      <section class="memory-panel" aria-label="Persistent progress">
+        <div>
+          <span>Memories</span>
+          <strong id="memories">0</strong>
+        </div>
+        <div>
+          <span>Faster Hands</span>
+          <strong id="upgrades">0</strong>
+        </div>
+      </section>
+
+      <ol id="log" class="log" aria-label="Activity log">
+        <li>Wake on the shore. Build enough progress to light the signal fire.</li>
+      </ol>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
