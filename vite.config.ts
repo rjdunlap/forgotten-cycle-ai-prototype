@@ -3,7 +3,7 @@ import tailwindcss from "tailwindcss";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  base: "/forgotten-cycle-ai-prototype/",
+  base: "./",
   css: {
     postcss: {
       plugins: [tailwindcss(), autoprefixer()]
