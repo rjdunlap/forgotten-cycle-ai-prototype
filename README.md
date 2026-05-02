@@ -15,6 +15,10 @@ The first playable prototype is now live. Its goal is to validate whether repeat
 - Build small playable tests before committing to large design structures.
 - Keep this repository distinct from the existing Forgotten Cycle project.
 
+## Working Design Bible
+
+For the current handoff, research notes, prototype decisions, and next playtest questions, see [docs/design-bible.md](docs/design-bible.md).
+
 ## Initial AI Prompt
 
 The following prompt started this AI-assisted design pass. It is preserved here so another programmer can understand the intended collaboration style and the draft context.
