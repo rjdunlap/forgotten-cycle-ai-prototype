@@ -8,7 +8,9 @@ import {
   resetCycle,
   runTick,
   type GameState
-} from "./game.js";
+} from "./game.ts";
+
+import "./styles.css";
 
 const els = {
   cycle: requiredElement<HTMLElement>("#cycle"),

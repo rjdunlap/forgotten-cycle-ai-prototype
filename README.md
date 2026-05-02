@@ -21,15 +21,16 @@ For the current handoff, research notes, prototype decisions, and next playtest 
 
 ## Local Development
 
-This prototype is served as static files for GitHub Pages. Source game logic lives in TypeScript and the committed browser assets are rebuilt with:
+This prototype is built from TypeScript with Vite and served as static files on GitHub Pages. Use:
 
 ```sh
 npm install
+npm run dev
 npm run build
 npm test
 ```
 
-The build compiles `src/*.ts` to browser modules beside the source files and compiles Tailwind from `src/styles.css` to the root `styles.css`.
+The source entry point is `src/app.ts`, with Tailwind loaded from `src/styles.css`. Build output is generated into `dist/` and is not committed; the GitHub Pages workflow publishes that generated static site after pushes to `main`.
 
 ## Initial AI Prompt
 

@@ -34,6 +34,10 @@
     color: #786f60;
     cursor: not-allowed;
   }
+
+  body {
+    @apply grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text;
+  }
 }
 
 @layer components {

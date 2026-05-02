@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createGameState, runTick, canReset, resetCycle, buyUpgrade } from "../src/game.js";
+import { buyUpgrade, canReset, createGameState, resetCycle, runTick } from "../src/game.ts";
 
 test("echoes make scavenged wood restore more warmth in the next life", () => {
   let state = createGameState();
