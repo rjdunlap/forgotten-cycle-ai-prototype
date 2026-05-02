@@ -4,56 +4,56 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Forgotten Cycle AI Prototype</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="./styles.css">
   </head>
-  <body>
-    <main class="app" aria-labelledby="title">
-      <section class="status-panel">
+  <body class="grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text">
+    <main class="grid w-[min(94vw,440px)] gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 sm:p-4" aria-labelledby="title">
+      <section class="flex items-center justify-between gap-4 border border-ember-line bg-ember-panel p-3.5">
         <div>
-          <p class="eyebrow">Playable slice</p>
-          <h1 id="title">Forgotten Cycle</h1>
+          <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">Playable slice</p>
+          <h1 id="title" class="text-[1.65rem] font-bold leading-none">Forgotten Cycle</h1>
         </div>
-        <div class="cycle-badge">
-          <span>Cycle</span>
-          <strong id="cycle">1</strong>
+        <div class="grid min-w-[72px] place-items-center border border-ember-line bg-[#121812] p-2">
+          <span class="text-[0.72rem] uppercase text-ember-muted">Cycle</span>
+          <strong id="cycle" class="text-[1.6rem] leading-tight text-ember-accent-strong">1</strong>
         </div>
       </section>
 
-      <section class="life-panel" aria-label="Current life">
-        <div class="job-row">
+      <section class="border border-ember-line bg-ember-panel p-3.5" aria-label="Current life">
+        <div class="grid grid-cols-[1fr_92px] items-center gap-3">
           <div>
-            <h2>Scavenge the Tide-Line</h2>
-            <p id="rate">+9 warmth about every 2.4s</p>
+            <h2 class="text-base font-bold">Scavenge the Tide-Line</h2>
+            <p id="rate" class="text-[0.88rem] text-ember-muted">+9 warmth about every 2.4s</p>
           </div>
           <button id="workButton" type="button">Hold Still</button>
         </div>
 
-        <div class="meter warmth-meter" aria-label="Inner Warmth">
-          <div id="progressBar" class="meter-fill"></div>
+        <div class="mt-3.5 h-[22px] overflow-hidden border border-ember-line bg-[#101510]" aria-label="Inner Warmth">
+          <div id="progressBar" class="meter-fill h-full bg-gradient-to-r from-ember-red to-ember-accent-strong"></div>
         </div>
-        <div class="meter-copy">
+        <div class="mt-2 flex justify-between gap-3 text-[0.88rem] text-ember-muted">
           <span id="progressText">45 / 100</span>
           <span id="goalText">Inner Warmth</span>
         </div>
       </section>
 
-      <section class="actions-panel" aria-label="Cycle actions">
+      <section class="grid gap-2 border border-ember-line bg-ember-panel p-2.5" aria-label="Cycle actions">
         <button id="resetButton" type="button" disabled>Wake Again</button>
         <button id="upgradeButton" type="button" disabled>Spend Memory: Echoes of the Coast</button>
       </section>
 
-      <section class="memory-panel" aria-label="Persistent progress">
-        <div>
-          <span>Memories</span>
-          <strong id="memories">0</strong>
+      <section class="flex justify-between gap-3 border border-ember-line bg-ember-panel p-3" aria-label="Persistent progress">
+        <div class="grid gap-0.5">
+          <span class="text-[0.72rem] uppercase text-ember-muted">Memories</span>
+          <strong id="memories" class="text-[1.3rem] leading-tight">0</strong>
         </div>
-        <div>
-          <span>Echoes</span>
-          <strong id="upgrades">0</strong>
+        <div class="grid gap-0.5">
+          <span class="text-[0.72rem] uppercase text-ember-muted">Echoes</span>
+          <strong id="upgrades" class="text-[1.3rem] leading-tight">0</strong>
         </div>
       </section>
 
-      <ol id="log" class="log" aria-label="Activity log">
+      <ol id="log" class="min-h-24 max-h-[132px] space-y-1.5 overflow-auto border border-ember-line bg-ember-panel py-3 pl-7 pr-3 text-[0.86rem] text-ember-muted" aria-label="Activity log">
         <li>The sun is gone. Salt spray numbs your fingers.</li>
       </ol>
     </main>

@@ -19,6 +19,18 @@ The first playable prototype is now live. Its goal is to validate whether repeat
 
 For the current handoff, research notes, prototype decisions, and next playtest questions, see [docs/design-bible.md](docs/design-bible.md).
 
+## Local Development
+
+This prototype is served as static files for GitHub Pages. Source game logic lives in TypeScript and the committed browser assets are rebuilt with:
+
+```sh
+npm install
+npm run build
+npm test
+```
+
+The build compiles `src/*.ts` to browser modules beside the source files and compiles Tailwind from `src/styles.css` to the root `styles.css`.
+
 ## Initial AI Prompt
 
 The following prompt started this AI-assisted design pass. It is preserved here so another programmer can understand the intended collaboration style and the draft context.

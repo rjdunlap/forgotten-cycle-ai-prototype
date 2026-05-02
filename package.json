@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "build": "npm run build:css && npm run build:ts",
+    "build:css": "tailwindcss -i ./src/styles.css -o ./styles.css --minify",
+    "build:ts": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19",
+    "typescript": "^6.0.3"
   }
 }

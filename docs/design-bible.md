@@ -50,9 +50,11 @@ This is testing one question:
 Current implementation files:
 
 - `index.html`: one-screen prototype structure.
-- `styles.css`: mobile-first idle panel styling.
-- `src/game.js`: tiny game state and loop logic.
-- `src/app.js`: UI binding and event log.
+- `src/styles.css`: Tailwind input and small base styles.
+- `styles.css`: generated Tailwind output committed for GitHub Pages.
+- `src/game.ts`: tiny typed game state and loop logic.
+- `src/app.ts`: typed UI binding and event log.
+- `src/game.js` and `src/app.js`: generated browser modules committed for GitHub Pages.
 - `test/game.test.js`: lightweight sanity tests retained from earlier work.
 
 ## Research Note: Reincarnation Loop

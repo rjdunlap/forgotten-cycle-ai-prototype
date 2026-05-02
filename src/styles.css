@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    background-image:
+      linear-gradient(180deg, rgba(16, 20, 16, 0.2), rgba(16, 20, 16, 0.85)),
+      url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1400&q=80");
+    background-size: cover;
+    background-position: center;
+  }
+
+  button {
+    min-height: 44px;
+    border: 1px solid #3a493d;
+    border-radius: 6px;
+    background: #253026;
+    color: #f4f0e5;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) {
+    border-color: #d6a84f;
+  }
+
+  button:disabled {
+    color: #786f60;
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  .meter-fill {
+    transition: width 120ms linear;
+  }
+}
