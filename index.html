@@ -6,7 +6,7 @@
     <title>Forgotten Cycle AI Prototype</title>
   </head>
   <body class="grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text">
-    <main class="grid w-[min(94vw,440px)] gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 sm:p-4" aria-labelledby="title">
+    <main id="app" class="grid w-[min(94vw,440px)] gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 transition-opacity duration-300 sm:p-4" aria-labelledby="title">
       <section class="flex items-center justify-between gap-4 border border-ember-line bg-ember-panel p-3.5">
         <div>
           <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">Playable slice</p>
@@ -36,26 +36,25 @@
         </div>
       </section>
 
-      <section class="grid gap-2 border border-ember-line bg-ember-panel p-2.5" aria-label="Cycle actions">
-        <button id="resetButton" type="button" disabled>Wake Again</button>
-        <button id="upgradeButton" type="button" disabled>Spend Memory: Echoes of the Coast</button>
-      </section>
-
-      <section class="flex justify-between gap-3 border border-ember-line bg-ember-panel p-3" aria-label="Persistent progress">
-        <div class="grid gap-0.5">
-          <span class="text-[0.72rem] uppercase text-ember-muted">Memories</span>
-          <strong id="memories" class="text-[1.3rem] leading-tight">0</strong>
-        </div>
-        <div class="grid gap-0.5">
-          <span class="text-[0.72rem] uppercase text-ember-muted">Echoes</span>
-          <strong id="upgrades" class="text-[1.3rem] leading-tight">0</strong>
-        </div>
-      </section>
-
       <ol id="log" class="min-h-24 max-h-[132px] space-y-1.5 overflow-auto border border-ember-line bg-ember-panel py-3 pl-7 pr-3 text-[0.86rem] text-ember-muted" aria-label="Activity log">
         <li>The sun is gone. Salt spray numbs your fingers.</li>
       </ol>
     </main>
+
+    <dialog id="deathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
+      <form method="dialog" class="grid gap-4 p-5">
+        <div class="grid gap-2">
+          <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
+          <h2 class="text-xl font-bold leading-tight">The tide claims the warmth.</h2>
+          <p class="text-sm text-ember-muted">The dark is total.</p>
+        </div>
+        <div class="grid gap-1 border border-ember-line bg-ember-panel p-3 text-sm">
+          <p id="deathStats" class="text-ember-text"></p>
+          <p id="deathLesson" class="text-ember-muted"></p>
+        </div>
+        <button id="wakeButton" type="button">Wake Again</button>
+      </form>
+    </dialog>
 
     <script type="module" src="/src/app.ts"></script>
   </body>

@@ -3,6 +3,10 @@ export const STARTING_WARMTH = 45;
 export const COLD_RATE = 7;
 export const BASE_SCAVENGE_TIME = 2.4;
 export const BASE_WARMTH_FOUND = 9;
+export const FUEL_RECOGNITION_TIME_BONUS = 0.25;
+export const FUEL_RECOGNITION_WARMTH_BONUS = 2;
+export const COLD_FAMILIARITY_RATE_BONUS = 0.02;
+export const MAX_COLD_FAMILIARITY_BONUS = 0.12;
 
 export interface GameState {
   cycle: number;
@@ -12,8 +16,8 @@ export interface GameState {
   coastalKnowledge: number;
   timeAlive: number;
   alive: boolean;
-  memories: number;
-  upgrades: number;
+  fuelRecognition: number;
+  coldFamiliarity: number;
 }
 
 export function createGameState(): GameState {
@@ -25,17 +29,26 @@ export function createGameState(): GameState {
     coastalKnowledge: 0,
     timeAlive: 0,
     alive: true,
-    memories: 0,
-    upgrades: 0
+    fuelRecognition: 0,
+    coldFamiliarity: 0
   };
 }
 
 export function getScavengeTime(state: GameState): number {
-  return Math.max(1.1, BASE_SCAVENGE_TIME - state.upgrades * 0.25);
+  return Math.max(1.1, BASE_SCAVENGE_TIME - state.fuelRecognition * FUEL_RECOGNITION_TIME_BONUS);
 }
 
 export function getWarmthFound(state: GameState): number {
-  return BASE_WARMTH_FOUND + state.upgrades * 5;
+  return BASE_WARMTH_FOUND + state.fuelRecognition * FUEL_RECOGNITION_WARMTH_BONUS;
+}
+
+export function getColdRate(state: GameState): number {
+  const familiarityBonus = Math.min(
+    MAX_COLD_FAMILIARITY_BONUS,
+    state.coldFamiliarity * COLD_FAMILIARITY_RATE_BONUS
+  );
+
+  return COLD_RATE * (1 - familiarityBonus);
 }
 
 export function runTick(state: GameState, seconds = 1, isScavenging = true): GameState {
@@ -43,7 +56,7 @@ export function runTick(state: GameState, seconds = 1, isScavenging = true): Gam
 
   let foundWood = state.foundWood;
   let searchProgress = state.searchProgress;
-  let innerWarmth = state.innerWarmth - COLD_RATE * seconds;
+  let innerWarmth = state.innerWarmth - getColdRate(state) * seconds;
   const scavengeTime = getScavengeTime(state);
 
   if (isScavenging) {
@@ -82,16 +95,7 @@ export function resetCycle(state: GameState): GameState {
     coastalKnowledge: 0,
     timeAlive: 0,
     alive: true,
-    memories: state.memories + 1
-  };
-}
-
-export function buyUpgrade(state: GameState): GameState {
-  if (state.memories < 1) return state;
-
-  return {
-    ...state,
-    memories: state.memories - 1,
-    upgrades: state.upgrades + 1
+    fuelRecognition: state.fuelRecognition + 1,
+    coldFamiliarity: state.coldFamiliarity + 1
   };
 }

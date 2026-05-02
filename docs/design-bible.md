@@ -29,7 +29,7 @@ Repository: https://github.com/rjdunlap/forgotten-cycle-ai-prototype
 
 Current slice: "The First Ember"
 
-The player wakes on a cold shore at night. Inner Warmth drains over time. The only action is scavenging the tide-line for wood, brush, or other fuel. Scavenged fuel restores warmth. Eventually the player dies from cold. Death grants a memory. Memories can be spent on Echoes of the Coast, a persistent upgrade that makes scavenged fuel restore more warmth in future lives.
+The player wakes on a cold shore at night. Inner Warmth drains over time. The only action is scavenging the tide-line for wood, brush, or other fuel. Scavenged fuel restores warmth. Eventually the player dies from cold. Death opens a short wake-again popup, then the next life starts with automatic adaptation. Fuel recognition is the main early improvement; cold familiarity exists as a smaller secondary adaptation.
 
 This is testing one question:
 
@@ -43,9 +43,11 @@ This is testing one question:
 - Scavenging periodically finds fuel.
 - Fuel restores warmth.
 - Death happens when Inner Warmth reaches zero.
-- `Wake Again` starts a new cycle after death.
-- Death grants one memory.
-- `Echoes of the Coast` costs one memory and improves future scavenging value.
+- Death opens a short popup with time survived and fuel found.
+- `Wake Again` starts a new cycle from that popup.
+- Each death automatically improves fuel recognition.
+- Cold familiarity also improves in a smaller way, slightly reducing warmth drain.
+- Visible memory currency and upgrade spending are intentionally hidden for now.
 
 Current implementation files:
 
@@ -135,9 +137,9 @@ Prototype copy direction:
 
 - Main action: `Scavenge the Tide-Line`
 - Primary meter: `Inner Warmth`
-- Persistent upgrade: `Echoes of the Coast`
-- Death copy: "The frost takes you. You remember where the dry wood was."
-- Reset button: `Wake Again`
+- Persistent upgrade: automatic fuel recognition
+- Death copy: "The tide claims the warmth. The dark is total."
+- Reset button: `Wake Again`, shown in the death popup
 - Log flavor:
   - "The sun is gone. Salt spray numbs your fingers."
   - "You find soggy driftwood. It smokes, but it burns."
@@ -180,8 +182,8 @@ Keep these as small playtestable changes, not all at once.
 1. Add an initial "Explore the Shore" action that discovers the tide-line fuel source.
 2. Split fuel into "soggy driftwood" and "dry brush" only if the current loop feels too flat.
 3. Add a simple "night gets colder" phase if the first minute lacks tension.
-4. Make Echoes of the Coast improve find speed instead of warmth value, then compare feel.
-5. Add one line of death summary: time survived, fuel found, memory gained.
+4. Compare whether fuel recognition should improve find speed, warmth value, or both.
+5. Decide when the second meta layer should reveal Memory as a spendable currency.
 
 ## Things To Avoid For Now
 
@@ -201,7 +203,7 @@ You are working on the Forgotten Cycle AI Prototype repo. This is a small GitHub
 
 Before changing anything, read README.md and docs/design-bible.md. Pull before you work and push after useful playable changes.
 
-Current design target: "The First Ember." The player wakes on a cold shore at night. Inner Warmth drains over time. The player scavenges the tide-line for dry fuel. They die from cold, wake again, and use memory to buy Echoes of the Coast, making later lives better. The goal is not to build a full survival game. The goal is to test whether dying from exposure, remembering the coast, and surviving longer next life feels satisfying.
+Current design target: "The First Ember." The player wakes on a cold shore at night. Inner Warmth drains over time. The player scavenges the tide-line for dry fuel. They die from cold, see a short wake-again popup, and automatically remember the shore better next life. The goal is not to build a full survival game. The goal is to test whether dying from exposure, remembering the coast, and surviving longer next life feels satisfying.
 
 Important process preference: do not force TDD for this exploratory phase. Human playtesting is the main validation loop. Still run lightweight sanity checks before pushing.
 

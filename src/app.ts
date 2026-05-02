@@ -1,8 +1,8 @@
 import {
   MAX_WARMTH,
-  buyUpgrade,
   canReset,
   createGameState,
+  getColdRate,
   getScavengeTime,
   getWarmthFound,
   resetCycle,
@@ -17,17 +17,19 @@ const els = {
   progressBar: requiredElement<HTMLElement>("#progressBar"),
   progressText: requiredElement<HTMLElement>("#progressText"),
   rate: requiredElement<HTMLElement>("#rate"),
-  resetButton: requiredElement<HTMLButtonElement>("#resetButton"),
-  upgradeButton: requiredElement<HTMLButtonElement>("#upgradeButton"),
   workButton: requiredElement<HTMLButtonElement>("#workButton"),
-  memories: requiredElement<HTMLElement>("#memories"),
-  upgrades: requiredElement<HTMLElement>("#upgrades"),
-  log: requiredElement<HTMLOListElement>("#log")
+  log: requiredElement<HTMLOListElement>("#log"),
+  app: requiredElement<HTMLElement>("#app"),
+  deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
+  deathStats: requiredElement<HTMLElement>("#deathStats"),
+  deathLesson: requiredElement<HTMLElement>("#deathLesson"),
+  wakeButton: requiredElement<HTMLButtonElement>("#wakeButton")
 };
 
 let state = createGameState();
 let scavenging = true;
 let lastTick = performance.now();
+let deathShown = false;
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -48,16 +50,15 @@ function render(): void {
   const percent = (state.innerWarmth / MAX_WARMTH) * 100;
   const scavengeTime = getScavengeTime(state);
   const warmthFound = getWarmthFound(state);
+  const coldRate = getColdRate(state);
 
   els.cycle.textContent = String(state.cycle);
   els.progressBar.style.width = `${percent}%`;
   els.progressText.textContent = state.alive ? `${Math.ceil(state.innerWarmth)} / ${MAX_WARMTH}` : "cold";
-  els.rate.textContent = `+${warmthFound} warmth about every ${scavengeTime.toFixed(1)}s`;
-  els.memories.textContent = String(state.memories);
-  els.upgrades.textContent = String(state.upgrades);
-  els.resetButton.disabled = !canReset(state);
-  els.upgradeButton.disabled = state.memories < 1;
+  els.rate.textContent = `+${warmthFound} warmth about every ${scavengeTime.toFixed(1)}s; cold drains ${coldRate.toFixed(1)}/s`;
+  els.workButton.disabled = !state.alive;
   els.workButton.textContent = scavenging ? "Hold Still" : "Scavenge";
+  els.app.classList.toggle("opacity-20", !state.alive);
 }
 
 function tick(now: number): void {
@@ -72,8 +73,8 @@ function tick(now: number): void {
       addLog(findWoodMessage(state));
     }
 
-    if (canReset(state)) {
-      addLog("The frost takes you. You remember where the dry wood was.");
+    if (canReset(state) && !deathShown) {
+      showDeathDialog();
     }
     render();
   }
@@ -82,22 +83,21 @@ function tick(now: number): void {
 }
 
 els.workButton.addEventListener("click", () => {
+  if (!state.alive) return;
   scavenging = !scavenging;
   addLog(scavenging ? "You search the tide-line for anything dry." : "You curl against the wind and wait.");
   render();
 });
 
-els.resetButton.addEventListener("click", () => {
+els.wakeButton.addEventListener("click", () => {
   if (!canReset(state)) return;
-  state = resetCycle(state);
-  addLog("You wake on the same shore. The dunes feel less unfamiliar.");
-  render();
-});
 
-els.upgradeButton.addEventListener("click", () => {
-  if (state.memories < 1) return;
-  state = buyUpgrade(state);
-  addLog("An echo settles in. Dry fuel will be easier to recognize.");
+  const nextFuelRecognition = state.fuelRecognition + 1;
+  const nextColdFamiliarity = state.coldFamiliarity + 1;
+  state = resetCycle(state);
+  deathShown = false;
+  els.deathDialog.close();
+  addLog(getWakeMessage(nextFuelRecognition, nextColdFamiliarity));
   render();
 });
 
@@ -111,6 +111,45 @@ function findWoodMessage(currentState: GameState): string {
 
   const messageIndex = (currentState.foundWood - 1) % messages.length;
   return messages[messageIndex] ?? messages[0];
+}
+
+function showDeathDialog(): void {
+  deathShown = true;
+  els.deathStats.textContent = `You lasted ${formatDuration(state.timeAlive)} and found ${state.foundWood} fuel.`;
+  els.deathLesson.textContent = getDeathLesson(state.cycle);
+  els.deathDialog.showModal();
+}
+
+function getDeathLesson(cycle: number): string {
+  const lessons: readonly [string, string, string] = [
+    "The cold was a lesson. You remember the shape of dry wood above the tide.",
+    "Your hands remember bark from rot, cedar from soaked driftwood.",
+    "The shore is less silent now. Useful fuel stands out sooner."
+  ];
+
+  return lessons[Math.min(cycle - 1, lessons.length - 1)] ?? lessons[0];
+}
+
+function getWakeMessage(fuelRecognition: number, _coldFamiliarity: number): string {
+  const messages: readonly [string, string, string] = [
+    "You wake on the same shore. The tide-line gives up its secrets a little sooner.",
+    "Your hands know what will burn. The wind bites, but not quite as deeply.",
+    "The shore is familiar now. Dry fuel catches your eye before the cold can steal your focus."
+  ];
+
+  return messages[Math.min(fuelRecognition - 1, messages.length - 1)] ?? messages[0];
+}
+
+function formatDuration(seconds: number): string {
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const remainingSeconds = wholeSeconds % 60;
+
+  if (minutes === 0) {
+    return `${remainingSeconds}s`;
+  }
+
+  return `${minutes}m ${remainingSeconds.toString().padStart(2, "0")}s`;
 }
 
 render();

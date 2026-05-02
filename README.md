@@ -256,9 +256,9 @@ The first playable slice tests repeated-life acceleration in the smallest possib
 - one screen
 - one shoreline scavenging action
 - one inevitable cold/exposure death
-- one memory gained after death
-- one persistent upgrade that makes scavenged fuel restore more warmth
+- one death summary popup
+- one automatic remembered adaptation that makes the shore easier to read
 
 Robert clarified that the reset should be framed around death, closer to A Usual Idle Life and Idle Reincarnator: the player keeps playing and gaining experience during the current life until they inevitably die. For this project, the earliest version starts around basic survival in a hostile environment.
 
-The current first-loop framing is "The First Ember": the player wakes on a cold shore at night, loses Inner Warmth over time, scavenges the tide-line for wood and dry brush, dies when the cold overtakes them, and spends memory on Echoes of the Coast so future lives recognize useful fuel faster.
+The current first-loop framing is "The First Ember": the player wakes on a cold shore at night, loses Inner Warmth over time, scavenges the tide-line for wood and dry brush, dies when the cold overtakes them, and wakes again with automatic fuel recognition. Cold familiarity exists as a small secondary adaptation for later payoff, but fuel recognition is what drives early survival.
