@@ -19,6 +19,8 @@ The first playable prototype is now live. Its goal is to validate whether repeat
 
 For the current handoff, research notes, prototype decisions, and next playtest questions, see [docs/design-bible.md](docs/design-bible.md).
 
+For the broader lifecycle exploration research reference covering wellness, faction careers, knowledge gates, prestige layers, automation, and the hollow-world arc, see [docs/lifecycle-exploration-research.md](docs/lifecycle-exploration-research.md).
+
 ## Local Development
 
 This prototype is built from TypeScript with Vite and served as static files on GitHub Pages. Use:

@@ -62,6 +62,12 @@ Current implementation files:
 
 Robert provided the following research/design synthesis as a stronger direction for the first loop.
 
+## Long-Horizon Research Ingest
+
+Robert also provided a broader lifecycle-exploration design synthesis covering wellness/mortality, faction career ladders, cartographic discovery, knowledge gates, prestige layers, automation, and an eventual hollow-world arc. That material has been ingested into [lifecycle-exploration-research.md](lifecycle-exploration-research.md).
+
+Use that file as the long-horizon reference when answering future design questions so the project does not drift into invented systems. It does not override the current prototype guardrail: keep "The First Ember" small until Robert explicitly asks to expand beyond the death-driven shoreline loop.
+
 ### Genre Research
 
 Idle Reincarnator and A Usual Idle Life share a prestige-loop structure where death is not game over. It is the payout phase.
