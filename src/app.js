@@ -1,4 +1,4 @@
-import { LIFE_GOAL, buyUpgrade, canReset, createGameState, resetCycle, runTick } from "./game.js";
+import { buyUpgrade, canReset, createGameState, resetCycle, runTick } from "./game.js";
 
 const els = {
   cycle: document.querySelector("#cycle"),
@@ -24,14 +24,14 @@ function addLog(message) {
 }
 
 function render() {
-  const progress = Math.floor(state.progress * 10) / 10;
-  const percent = (state.progress / LIFE_GOAL) * 100;
+  const secondsLeft = Math.max(0, state.lifespan - state.timeAlive);
+  const percent = (secondsLeft / state.lifespan) * 100;
   const rate = 1 + state.upgrades;
 
   els.cycle.textContent = state.cycle;
   els.progressBar.style.width = `${percent}%`;
-  els.progressText.textContent = `${progress} / ${LIFE_GOAL}`;
-  els.rate.textContent = `${rate} progress / second`;
+  els.progressText.textContent = state.alive ? `${secondsLeft.toFixed(1)}s left` : "dead";
+  els.rate.textContent = `${rate} survival XP / second`;
   els.memories.textContent = state.memories;
   els.upgrades.textContent = state.upgrades;
   els.resetButton.disabled = !canReset(state);
@@ -46,7 +46,7 @@ function tick(now) {
   if (working && !canReset(state)) {
     state = runTick(state, elapsed);
     if (canReset(state)) {
-      addLog("The signal fire catches. A new cycle is ready.");
+      addLog(`You die with ${Math.floor(state.survivalXp)} survival XP. A memory remains.`);
     }
     render();
   }
@@ -63,14 +63,14 @@ els.workButton.addEventListener("click", () => {
 els.resetButton.addEventListener("click", () => {
   if (!canReset(state)) return;
   state = resetCycle(state);
-  addLog("The tide takes the shore. You wake again with one memory.");
+  addLog("You wake on the same shore, carrying a fragment of the last life.");
   render();
 });
 
 els.upgradeButton.addEventListener("click", () => {
   if (state.memories < 1) return;
   state = buyUpgrade(state);
-  addLog("Memory settles into your hands. Future work is faster.");
+  addLog("Memory sharpens into instinct. Survival practice comes faster.");
   render();
 });
 

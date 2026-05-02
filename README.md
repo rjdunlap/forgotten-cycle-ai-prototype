@@ -4,13 +4,14 @@ This is a shared workspace for an AI-assisted idle RPG prototype being explored 
 
 It is intentionally separate from the existing Forgotten Cycle project. The working name and some ideas overlap, but this repo is for testing a smaller, loop-first direction inspired primarily by Idle Reincarnator.
 
-No gameplay implementation has started yet. The first goal is to validate the core direction before expanding systems.
+The first playable prototype is now live. Its goal is to validate whether repeating a short life, dying, and returning with a persistent upgrade feels satisfying before expanding systems.
 
 ## Current Direction
 
 - Treat the previous Game Design Document as draft material, not a locked foundation.
 - Start with the loop and progression feel before designing factions, towns, companions, or lore-heavy systems.
 - Aim closer to Idle Reincarnator than to a broad RuneScape/Melvor-style RPG.
+- Make reset death-driven: the player keeps acting and gaining experience until survival needs inevitably overtake them.
 - Build small playable tests before committing to large design structures.
 - Keep this repository distinct from the existing Forgotten Cycle project.
 
@@ -230,3 +231,15 @@ Before adding systems, validate what part of Idle Reincarnator this prototype sh
 - compact UI flow
 - discovering better routes
 - another specific feeling Robert identifies
+
+## First Playable Slice
+
+The first playable slice tests repeated-life acceleration in the smallest possible form:
+
+- one screen
+- one survival job
+- one inevitable death/reset
+- one memory gained after death
+- one persistent upgrade that makes the next life gain survival experience faster
+
+Robert clarified that the reset should be framed around death, closer to A Usual Idle Life and Idle Reincarnator: the player keeps playing and gaining experience during the current life until they inevitably die. For this project, the earliest version starts around basic survival in a hostile environment.

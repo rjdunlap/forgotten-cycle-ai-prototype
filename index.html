@@ -23,23 +23,23 @@
         <div class="job-row">
           <div>
             <h2>Gather Driftwood</h2>
-            <p id="rate">1 progress / second</p>
+            <p id="rate">1 survival XP / second</p>
           </div>
           <button id="workButton" type="button">Work</button>
         </div>
 
-        <div class="meter" aria-label="Life progress">
+        <div class="meter" aria-label="Life remaining">
           <div id="progressBar" class="meter-fill"></div>
         </div>
         <div class="meter-copy">
-          <span id="progressText">0 / 10</span>
-          <span id="goalText">Reach the signal fire</span>
+          <span id="progressText">10.0s left</span>
+          <span id="goalText">Survive the shore</span>
         </div>
       </section>
 
       <section class="actions-panel" aria-label="Cycle actions">
-        <button id="resetButton" type="button" disabled>Begin Next Cycle</button>
-        <button id="upgradeButton" type="button" disabled>Spend Memory: Faster Hands</button>
+        <button id="resetButton" type="button" disabled>Wake Again</button>
+        <button id="upgradeButton" type="button" disabled>Spend Memory: Hard-Won Instinct</button>
       </section>
 
       <section class="memory-panel" aria-label="Persistent progress">
@@ -48,13 +48,13 @@
           <strong id="memories">0</strong>
         </div>
         <div>
-          <span>Faster Hands</span>
+          <span>Instinct</span>
           <strong id="upgrades">0</strong>
         </div>
       </section>
 
       <ol id="log" class="log" aria-label="Activity log">
-        <li>Wake on the shore. Build enough progress to light the signal fire.</li>
+        <li>Wake on the shore. Learn what you can before thirst and exposure take you.</li>
       </ol>
     </main>
 

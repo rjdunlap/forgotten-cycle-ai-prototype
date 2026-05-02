@@ -1,24 +1,33 @@
-export const LIFE_GOAL = 10;
+export const STARTING_LIFESPAN = 10;
 
 export function createGameState() {
   return {
     cycle: 1,
-    progress: 0,
+    survivalXp: 0,
+    timeAlive: 0,
+    lifespan: STARTING_LIFESPAN,
+    alive: true,
     memories: 0,
     upgrades: 0
   };
 }
 
 export function runTick(state, seconds = 1) {
-  const progressRate = 1 + state.upgrades;
+  if (!state.alive) return state;
+
+  const survivalRate = 1 + state.upgrades;
+  const timeAlive = Math.min(state.lifespan, state.timeAlive + seconds);
+
   return {
     ...state,
-    progress: Math.min(LIFE_GOAL, state.progress + seconds * progressRate)
+    timeAlive,
+    survivalXp: state.survivalXp + seconds * survivalRate,
+    alive: timeAlive < state.lifespan
   };
 }
 
 export function canReset(state) {
-  return state.progress >= LIFE_GOAL;
+  return !state.alive;
 }
 
 export function resetCycle(state) {
@@ -27,7 +36,9 @@ export function resetCycle(state) {
   return {
     ...state,
     cycle: state.cycle + 1,
-    progress: 0,
+    survivalXp: 0,
+    timeAlive: 0,
+    alive: true,
     memories: state.memories + 1
   };
 }
