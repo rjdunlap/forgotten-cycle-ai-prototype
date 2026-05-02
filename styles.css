@@ -148,7 +148,7 @@ h2 {
 .meter-fill {
   width: 0%;
   height: 100%;
-  background: linear-gradient(90deg, var(--green), var(--accent-strong));
+  background: linear-gradient(90deg, var(--red), var(--accent-strong));
   transition: width 120ms linear;
 }
 
