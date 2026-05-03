@@ -314,6 +314,7 @@ Follow-up:
 - Later candidate: let repeated salvage reveal small non-persistent supply discoveries or log fragments from the wreckage, so the shoreline tells how the player arrived before it becomes a full inventory system.
 - Split place discovery from salvage: `Get Your Bearings` should reveal places and routes; `Scavenge the Wreckage` should own wreckage/plank/crate/rope flavor.
 - Use Shore Sense Lv 3/Lv 4 to reveal inert place hooks like `Explore the Tide-Line` and `Watch the Jungle Line`, then activate those as future small passes.
+- Make action levels player-facing by action name. Show `Get Your Bearings Lv X` rather than a separate `Shore Sense` skill, and delay XP/mastery math until later Bearings levels make that kind of system readout feel earned.
 
 ### Pass 6: Night Gets Colder
 

@@ -172,9 +172,7 @@ function render(): void {
 
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
-  els.orientDetail.textContent = state.fuelSourceKnown
-    ? `Shore Sense Lv ${shoreSenseLevel} (${formatLevelProgress(state.shoreSenseXp)}) - next insight in ${Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1)}s. Mastery +${Math.round(shoreSenseMasteryBonus * 100)}%.`
-    : `Notice tide-line signs in ${Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1)}s.`;
+  els.orientDetail.textContent = getBearingsDetail(shoreSenseLevel, bearingsTime, shoreSenseMasteryBonus);
   els.orientStatus.textContent = getActionStatus("orienting");
   els.orientProgressBar.style.width = `${orientPercent}%`;
 
@@ -336,6 +334,23 @@ function getActivitySummary(): string {
   return "Current: tending the fire";
 }
 
+function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: number): string {
+  const remaining = Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1);
+  if (level < 1) {
+    return `Notice tide, wind, and the shape of the shore in ${remaining}s.`;
+  }
+
+  if (level < 2) {
+    return `Get Your Bearings Lv ${level} - make a clearer entry of light, surf, and where you stand.`;
+  }
+
+  if (level < 3) {
+    return `Get Your Bearings Lv ${level} - sort the wreckage from the wider tide-line.`;
+  }
+
+  return `Get Your Bearings Lv ${level} (${formatLevelProgress(state.shoreSenseXp)}) - next insight in ${remaining}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
+}
+
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
   if (previousLevel < 1 && currentLevel >= 1) {
     return "Salt. Light. Surf. You make the first clean mark in your head.";
@@ -358,7 +373,7 @@ function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: num
   }
 
   if (currentLevel > previousLevel) {
-    return `You read the wind and wrack more cleanly. Shore Sense reaches Lv ${currentLevel} this entry.`;
+    return `You read the wind and wrack more cleanly. Get Your Bearings reaches Lv ${currentLevel} this entry.`;
   }
 
   const messages: readonly string[] = [
