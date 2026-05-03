@@ -40,6 +40,7 @@ const els = {
   lightRow: requiredElement<HTMLElement>("#lightRow"),
   lightText: requiredElement<HTMLElement>("#lightText"),
   activitySummary: requiredElement<HTMLElement>("#activitySummary"),
+  exposureBarRow: requiredElement<HTMLElement>("#exposureBarRow"),
   warmthBar: requiredElement<HTMLElement>("#warmthBar"),
   warmthText: requiredElement<HTMLElement>("#warmthText"),
   thirstBar: requiredElement<HTMLElement>("#thirstBar"),
@@ -91,6 +92,7 @@ let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
 let fuelDiscoveryLogged = false;
+let firstFireLogged = false;
 let jungleNoiseStage = 0;
 let lastExposurePhase = getExposurePhase(state);
 
@@ -145,6 +147,7 @@ function render(): void {
   const fireKnown = hasFireReadout();
   const tidePlaceKnown = hasTidePlaceReadout();
   const junglePlaceKnown = hasJunglePlaceReadout();
+  const systemKnown = hasSystemReadout();
 
   els.cycle.textContent = `Entry ${toRoman(state.cycle)}`;
   els.bodySection.hidden = !bodyKnown;
@@ -153,9 +156,10 @@ function render(): void {
   els.app.classList.toggle("app-shell-expanded", logKnown);
   els.lightRow.hidden = !hasLightReadout(state);
   els.thirstRow.hidden = !needsKnown;
-  els.thirstBarRow.hidden = !needsKnown;
+  els.exposureBarRow.hidden = !systemKnown;
+  els.thirstBarRow.hidden = !needsKnown || !systemKnown;
   els.foodRow.hidden = !needsKnown;
-  els.foodBarRow.hidden = !needsKnown;
+  els.foodBarRow.hidden = !needsKnown || !systemKnown;
   els.suppliesSection.hidden = !hasFuelReadout();
   els.fireSupplyRow.hidden = !fireKnown;
   els.placesSection.hidden = !tidePlaceKnown && !junglePlaceKnown;
@@ -165,18 +169,22 @@ function render(): void {
   els.activitySummary.textContent = getActivitySummary();
   els.warmthBar.style.width = `${bodyTemperaturePercent}%`;
   els.warmthBar.style.backgroundColor = getBodyTemperatureColor(bodyTemperature);
-  els.warmthText.textContent = state.alive ? getBodyTemperatureLabel(bodyTemperature) : "spent";
+  els.warmthText.textContent = state.alive
+    ? getBodyTemperatureLabel(bodyTemperature, systemKnown)
+    : systemKnown
+      ? "spent"
+      : "gone";
   els.thirstBar.style.width = `${thirstPercent}%`;
-  els.thirstText.textContent = state.thirst > 0 ? `${Math.ceil(state.thirst)} / ${MAX_THIRST}` : "empty";
+  els.thirstText.textContent = getThirstLabel(state.thirst, systemKnown);
   els.foodBar.style.width = `${foodPercent}%`;
-  els.foodText.textContent = state.food > 0 ? `${Math.ceil(state.food)} / ${MAX_FOOD}` : "empty";
+  els.foodText.textContent = getFoodLabel(state.food, systemKnown);
   els.conditionDetail.textContent = getConditionDetail(coldRate, heatRate, sunWarmRate, fireWarmRate);
   els.woodText.textContent = formatWood(state.foundWood);
   els.fireText.textContent = `${Math.ceil(state.fireStrength)} / ${MAX_WARMTH}`;
 
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
-  els.orientTitle.textContent = shoreSenseLevel > 0 ? `Get Your Bearings - Lv ${shoreSenseLevel}` : "Get Your Bearings";
+  els.orientTitle.textContent = getActionTitle("Get Your Bearings", shoreSenseLevel);
   els.orientDetail.textContent = getBearingsDetail(shoreSenseLevel, bearingsTime, shoreSenseMasteryBonus);
   els.orientStatus.textContent = getActionStatus("orienting");
   els.orientProgressBar.style.width = `${orientPercent}%`;
@@ -184,7 +192,7 @@ function render(): void {
   els.scavengeButton.hidden = !hasFuelReadout();
   els.scavengeButton.disabled = !state.alive || !state.fuelSourceKnown;
   els.scavengeButton.setAttribute("aria-pressed", String(activity === "scavenging"));
-  els.scavengeTitle.textContent = scavengeLevel > 0 ? `Scavenge the Wreckage - Lv ${scavengeLevel}` : "Scavenge the Wreckage";
+  els.scavengeTitle.textContent = getActionTitle("Scavenge the Wreckage", scavengeLevel);
   els.scavengeDetail.textContent = getScavengeDetail(scavengeLevel, scavengeTime, woodFound, scavengeLightEfficiency, scavengeMasteryBonus);
   els.scavengeStatus.textContent = getActionStatus("scavenging");
   els.scavengeProgressBar.style.width = `${scavengePercent}%`;
@@ -193,7 +201,7 @@ function render(): void {
   els.fireButton.disabled = !state.alive || !state.fuelSourceKnown || state.foundWood < 1;
   els.fireButton.setAttribute("aria-pressed", String(activity === "tending"));
   els.fireTitle.textContent =
-    firekeepingLevel > 0 || state.fireStrength > 0 ? `Tend the Fire - Lv ${firekeepingLevel}` : "Start a Fire";
+    firekeepingLevel > 0 || state.fireStrength > 0 ? getActionTitle("Tend the Fire", firekeepingLevel) : "Start a Fire";
   els.fireDetail.textContent = getFireDetail(firekeepingLevel, tendFireTime, firekeepingMasteryBonus);
   els.fireStatus.textContent = getActionStatus("tending");
   els.fireProgressBar.style.width = `${activity === "tending" ? tendPercent : firePercent}%`;
@@ -253,17 +261,22 @@ function tick(now: number): void {
     }
 
     if (getScavengeLevel(state) > previousScavengeLevel) {
-      addLog(`Your hands sort salvage from wreckage faster. Scavenge reaches Lv ${getScavengeLevel(state)} this entry.`);
+      addLog(getScavengeLevelMessage(getScavengeLevel(state)));
     }
 
     if (state.fireStrength > previousFire + 1) {
-      addLog("The fire catches higher. Heat pushes back against the shore.");
+      if (!firstFireLogged && previousFire <= 0) {
+        firstFireLogged = true;
+        addLog("The first flame takes. The dark now has an edge.");
+      } else {
+        addLog("The fire catches higher. Heat pushes back against the shore.");
+      }
     }
 
     addJungleNoiseLogs(previousJungleThreat, getJungleThreat(state));
 
     if (getFirekeepingLevel(state) > previousFirekeepingLevel) {
-      addLog(`You learn how the coals breathe. Firekeeping reaches Lv ${getFirekeepingLevel(state)} this entry.`);
+      addLog(getFirekeepingLevelMessage(getFirekeepingLevel(state)));
     }
 
     if (canReset(state) && !deathShown) {
@@ -322,6 +335,7 @@ els.wakeButton.addEventListener("click", () => {
   state = resetCycle(state);
   activity = "orienting";
   fuelDiscoveryLogged = state.fuelSourceKnown;
+  firstFireLogged = false;
   jungleNoiseStage = 0;
   lastExposurePhase = getExposurePhase(state);
   deathShown = false;
@@ -333,7 +347,17 @@ els.wakeButton.addEventListener("click", () => {
 function getActivitySummary(): string {
   if (speedMultiplier === 0) return "Paused";
   if (!state.alive) return "Ended";
-  return "Choose a shore action";
+  if (!hasLogReadout()) return "The shore is bright.";
+  if (!hasFuelReadout()) return "An entry is forming.";
+  if (activity === "orienting") return "Reading the shore.";
+  if (activity === "scavenging") return "Sorting the wreckage.";
+  return state.fireStrength > 0 ? "Keeping the dark back." : "Making a first fire.";
+}
+
+function getActionTitle(label: string, level: number): string {
+  if (!hasSystemReadout() || level < 1) return label;
+
+  return `${label} - Lv ${level}`;
 }
 
 function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: number): string {
@@ -408,6 +432,10 @@ function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: num
   }
 
   if (currentLevel > previousLevel) {
+    if (!hasSystemReadout()) {
+      return "You read the wind and wrack more cleanly. The shore gives up another small rule.";
+    }
+
     return `You read the wind and wrack more cleanly. Get Your Bearings reaches Lv ${currentLevel} this entry.`;
   }
 
@@ -422,7 +450,37 @@ function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: num
   return messages[messageIndex] ?? "You keep reading the shore. One more small pattern holds still long enough to name.";
 }
 
-function getBodyTemperatureLabel(bodyTemperature: number): string {
+function getScavengeLevelMessage(level: number): string {
+  if (!hasSystemReadout()) {
+    if (level < 2) return "Your hands begin to know which wreckage is worth keeping.";
+    if (level < 4) return "Planks, spars, rope, shavings. The useful pieces separate faster now.";
+    return "The broken line looks less random when your hands move through it.";
+  }
+
+  return `Your hands sort salvage from wreckage faster. Scavenge reaches Lv ${level} this entry.`;
+}
+
+function getFirekeepingLevelMessage(level: number): string {
+  if (!hasSystemReadout()) {
+    if (level < 2) return "You learn the first small patience of coals.";
+    if (level < 4) return "The fire answers better when you feed it less like panic.";
+    return "Your hands learn when the flame wants air and when it wants wood.";
+  }
+
+  return `You learn how the coals breathe. Firekeeping reaches Lv ${level} this entry.`;
+}
+
+function getBodyTemperatureLabel(bodyTemperature: number, systemKnown = hasSystemReadout()): string {
+  if (!systemKnown) {
+    if (bodyTemperature <= 0) return "cold";
+    if (bodyTemperature >= MAX_WARMTH) return "fevered";
+    if (bodyTemperature < 25) return "numb";
+    if (bodyTemperature < 40) return "shivering";
+    if (bodyTemperature < 62) return "steady";
+    if (bodyTemperature < 78) return "overwarm";
+    return "burning";
+  }
+
   const offset = Math.round(bodyTemperature - COMFORT_WARMTH);
   if (bodyTemperature <= 0) return "cold end";
   if (bodyTemperature >= MAX_WARMTH) return "heat end";
@@ -430,6 +488,24 @@ function getBodyTemperatureLabel(bodyTemperature: number): string {
   if (bodyTemperature > 70) return `+${offset} hot`;
   if (offset === 0) return "0 steady";
   return `${offset > 0 ? "+" : ""}${offset} steady`;
+}
+
+function getThirstLabel(thirst: number, systemKnown = hasSystemReadout()): string {
+  if (systemKnown) return thirst > 0 ? `${Math.ceil(thirst)} / ${MAX_THIRST}` : "empty";
+  if (thirst <= 0) return "empty";
+  if (thirst < 25) return "cracked";
+  if (thirst < 55) return "dry";
+  if (thirst < 85) return "aware";
+  return "quiet";
+}
+
+function getFoodLabel(food: number, systemKnown = hasSystemReadout()): string {
+  if (systemKnown) return food > 0 ? `${Math.ceil(food)} / ${MAX_FOOD}` : "empty";
+  if (food <= 0) return "hollow";
+  if (food < 25) return "weak";
+  if (food < 55) return "gnawing";
+  if (food < 85) return "thin";
+  return "quiet";
 }
 
 function getBodyTemperatureColor(bodyTemperature: number): string {
@@ -613,9 +689,19 @@ function showDeathDialog(): void {
   deathShown = true;
   els.deathTitle.textContent = getDeathTitle(state);
   els.deathIntro.textContent = getDeathIntro(state);
-  els.deathStats.textContent = `You lasted ${formatDuration(state.timeAlive)}, found ${formatWood(state.foundWood)} wood, and ended with ${Math.ceil(state.thirst)} thirst / ${Math.ceil(state.food)} food.`;
+  els.deathStats.textContent = getDeathStats(state);
   els.deathLesson.textContent = getDeathLesson(state.cycle);
   els.deathDialog.showModal();
+}
+
+function getDeathStats(currentState: GameState): string {
+  if (!hasSystemReadout()) {
+    if (currentState.foundWood < 1) return "The entry ends before your hands can name what would burn.";
+    if (currentState.fireStrength <= 0) return "The entry ends with wood gathered and no lasting flame.";
+    return "The entry ends past the first fire. The shore has changed shape in memory.";
+  }
+
+  return `You lasted ${formatDuration(currentState.timeAlive)}, found ${formatWood(currentState.foundWood)} wood, and ended with ${Math.ceil(currentState.thirst)} thirst / ${Math.ceil(currentState.food)} food.`;
 }
 
 function getDeathTitle(currentState: GameState): string {
