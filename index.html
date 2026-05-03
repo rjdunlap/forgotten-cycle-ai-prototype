@@ -178,15 +178,37 @@
       </section>
     </main>
 
-    <aside class="testing-speed grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
-      <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Speed</p>
-      <div class="grid grid-cols-4 gap-1">
-        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="0" aria-pressed="false">Pause</button>
-        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="1" aria-pressed="true">1x</button>
-        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="5" aria-pressed="false">5x</button>
-        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="10" aria-pressed="false">10x</button>
-      </div>
-    </aside>
+    <div class="testing-speed flex gap-2 items-start">
+      <aside class="grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
+        <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Speed</p>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="0" aria-pressed="false">Pause</button>
+          <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="1" aria-pressed="true">1x</button>
+          <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="5" aria-pressed="false">5x</button>
+          <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="10" aria-pressed="false">10x</button>
+        </div>
+      </aside>
+      <aside class="grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Debug">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Debug</p>
+          <button id="debugToggle" type="button" class="text-ember-muted hover:text-ember-text" title="Toggle debug panel" aria-pressed="false">
+            <svg id="debugEyeOpen" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="debugEyeClosed" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <div id="debugPanel" class="grid gap-1 text-[0.68rem] font-mono text-ember-muted" hidden>
+          <div>Entry: <span id="dbgCycle">1</span></div>
+          <div>Alive: <span id="dbgAlive">true</span></div>
+          <div>Temp: <span id="dbgWarmth">-</span></div>
+          <div>Thirst: <span id="dbgThirst">-</span></div>
+          <div>Food: <span id="dbgFood">-</span></div>
+          <div>Phase: <span id="dbgPhase">-</span></div>
+          <div>CtD shown: <span id="dbgCtdShown">false</span></div>
+          <div>CtD cond: <span id="dbgCtdCond">false</span></div>
+          <div>Death shown: <span id="dbgDeathShown">false</span></div>
+        </div>
+      </aside>
+    </div>
     </div>
 
     <dialog id="closeToDeathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">

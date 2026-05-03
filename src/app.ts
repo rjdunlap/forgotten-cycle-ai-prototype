@@ -88,6 +88,19 @@ const els = {
   tidePlaceButton: requiredElement<HTMLButtonElement>("#tidePlaceButton"),
   junglePlaceButton: requiredElement<HTMLButtonElement>("#junglePlaceButton"),
   speedButtons: [...document.querySelectorAll<HTMLButtonElement>(".speedButton")],
+  debugToggle: requiredElement<HTMLButtonElement>("#debugToggle"),
+  debugEyeOpen: requiredElement<HTMLElement>("#debugEyeOpen"),
+  debugEyeClosed: requiredElement<HTMLElement>("#debugEyeClosed"),
+  debugPanel: requiredElement<HTMLElement>("#debugPanel"),
+  dbgCycle: requiredElement<HTMLElement>("#dbgCycle"),
+  dbgAlive: requiredElement<HTMLElement>("#dbgAlive"),
+  dbgWarmth: requiredElement<HTMLElement>("#dbgWarmth"),
+  dbgThirst: requiredElement<HTMLElement>("#dbgThirst"),
+  dbgFood: requiredElement<HTMLElement>("#dbgFood"),
+  dbgPhase: requiredElement<HTMLElement>("#dbgPhase"),
+  dbgCtdShown: requiredElement<HTMLElement>("#dbgCtdShown"),
+  dbgCtdCond: requiredElement<HTMLElement>("#dbgCtdCond"),
+  dbgDeathShown: requiredElement<HTMLElement>("#dbgDeathShown"),
   logSection: requiredElement<HTMLElement>("#logSection"),
   log: requiredElement<HTMLOListElement>("#log"),
   pageFrame: requiredElement<HTMLElement>("#pageFrame"),
@@ -260,6 +273,18 @@ function render(): void {
     button.setAttribute("aria-pressed", String(isActive));
     button.classList.toggle("border-ember-accent-strong", isActive);
     button.classList.toggle("text-ember-accent-strong", isActive);
+  }
+
+  if (!els.debugPanel.hidden) {
+    els.dbgCycle.textContent = String(state.cycle);
+    els.dbgAlive.textContent = String(state.alive);
+    els.dbgWarmth.textContent = state.innerWarmth.toFixed(1);
+    els.dbgThirst.textContent = state.thirst.toFixed(1);
+    els.dbgFood.textContent = state.food.toFixed(1);
+    els.dbgPhase.textContent = getExposurePhase(state);
+    els.dbgCtdShown.textContent = String(closeToDeathShown);
+    els.dbgCtdCond.textContent = String(isCloseToDeath(state));
+    els.dbgDeathShown.textContent = String(deathShown);
   }
 }
 
@@ -445,6 +470,15 @@ els.wakeButton.addEventListener("click", () => {
   if (state.cycle === 2) {
     els.dejaVuDialog.showModal();
   }
+});
+
+els.debugToggle.addEventListener("click", () => {
+  const open = els.debugPanel.hidden;
+  els.debugPanel.hidden = !open;
+  els.debugEyeOpen.hidden = open;
+  els.debugEyeClosed.hidden = !open;
+  els.debugToggle.setAttribute("aria-pressed", String(open));
+  render();
 });
 
 els.keepGoingButton.addEventListener("click", () => {
