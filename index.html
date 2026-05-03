@@ -21,7 +21,7 @@
       <section class="border border-ember-line bg-ember-panel p-3.5" aria-label="Current life">
         <div class="grid grid-cols-[1fr_92px] items-center gap-3">
           <div>
-            <h2 class="text-base font-bold">Scavenge the Tide-Line</h2>
+            <h2 id="activityTitle" class="text-base font-bold">Get Your Bearings</h2>
             <p id="rate" class="text-[0.88rem] text-ember-muted">+9 warmth about every 2.4s</p>
           </div>
           <button id="workButton" type="button">Hold Still</button>
@@ -40,6 +40,15 @@
         <li>The sun is gone. Salt spray numbs your fingers.</li>
       </ol>
     </main>
+
+    <aside class="fixed bottom-3 left-3 grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
+      <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Speed</p>
+      <div class="grid grid-cols-3 gap-1">
+        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="1" aria-pressed="true">1x</button>
+        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="5" aria-pressed="false">5x</button>
+        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="10" aria-pressed="false">10x</button>
+      </div>
+    </aside>
 
     <dialog id="deathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
       <form method="dialog" class="grid gap-4 p-5">

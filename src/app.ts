@@ -1,5 +1,7 @@
 import {
+  BEARINGS_TIME,
   MAX_WARMTH,
+  type Activity,
   canReset,
   createGameState,
   getColdRate,
@@ -14,10 +16,12 @@ import "./styles.css";
 
 const els = {
   cycle: requiredElement<HTMLElement>("#cycle"),
+  activityTitle: requiredElement<HTMLElement>("#activityTitle"),
   progressBar: requiredElement<HTMLElement>("#progressBar"),
   progressText: requiredElement<HTMLElement>("#progressText"),
   rate: requiredElement<HTMLElement>("#rate"),
   workButton: requiredElement<HTMLButtonElement>("#workButton"),
+  speedButtons: [...document.querySelectorAll<HTMLButtonElement>(".speedButton")],
   log: requiredElement<HTMLOListElement>("#log"),
   app: requiredElement<HTMLElement>("#app"),
   deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
@@ -27,9 +31,11 @@ const els = {
 };
 
 let state = createGameState();
-let scavenging = true;
+let activity: Activity = "orienting";
+let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
+let fuelDiscoveryLogged = false;
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -53,21 +59,36 @@ function render(): void {
   const coldRate = getColdRate(state);
 
   els.cycle.textContent = String(state.cycle);
+  els.activityTitle.textContent = getActivityTitle();
   els.progressBar.style.width = `${percent}%`;
   els.progressText.textContent = state.alive ? `${Math.ceil(state.innerWarmth)} / ${MAX_WARMTH}` : "cold";
-  els.rate.textContent = `+${warmthFound} warmth about every ${scavengeTime.toFixed(1)}s; cold drains ${coldRate.toFixed(1)}/s`;
-  els.workButton.disabled = !state.alive;
-  els.workButton.textContent = scavenging ? "Hold Still" : "Scavenge";
+  els.rate.textContent = getRateText(warmthFound, scavengeTime, coldRate);
+  els.workButton.disabled = !state.alive || (!state.fuelSourceKnown && activity === "orienting");
+  els.workButton.textContent = getButtonText();
   els.app.classList.toggle("opacity-20", !state.alive);
+
+  for (const button of els.speedButtons) {
+    const isActive = Number(button.dataset.speed) === speedMultiplier;
+    button.setAttribute("aria-pressed", String(isActive));
+    button.classList.toggle("border-ember-accent-strong", isActive);
+    button.classList.toggle("text-ember-accent-strong", isActive);
+  }
 }
 
 function tick(now: number): void {
-  const elapsed = Math.min(0.25, (now - lastTick) / 1000);
+  const elapsed = Math.min(0.25, (now - lastTick) / 1000) * (speedMultiplier / 5);
   lastTick = now;
 
   if (!canReset(state)) {
     const previousWood = state.foundWood;
-    state = runTick(state, elapsed, scavenging);
+    const knewFuelSource = state.fuelSourceKnown;
+    state = runTick(state, elapsed, activity);
+
+    if (!knewFuelSource && state.fuelSourceKnown && !fuelDiscoveryLogged) {
+      fuelDiscoveryLogged = true;
+      activity = "resting";
+      addLog("Above the wrack line, pale splinters and dry needles mark a place worth scavenging.");
+    }
 
     if (state.foundWood > previousWood) {
       addLog(findWoodMessage(state));
@@ -84,10 +105,19 @@ function tick(now: number): void {
 
 els.workButton.addEventListener("click", () => {
   if (!state.alive) return;
-  scavenging = !scavenging;
-  addLog(scavenging ? "You search the tide-line for anything dry." : "You curl against the wind and wait.");
+  if (!state.fuelSourceKnown) return;
+
+  activity = activity === "scavenging" ? "resting" : "scavenging";
+  addLog(activity === "scavenging" ? "You search the tide-line for anything dry." : "You curl against the wind and wait.");
   render();
 });
+
+for (const button of els.speedButtons) {
+  button.addEventListener("click", () => {
+    speedMultiplier = Number(button.dataset.speed) || 1;
+    render();
+  });
+}
 
 els.wakeButton.addEventListener("click", () => {
   if (!canReset(state)) return;
@@ -95,11 +125,34 @@ els.wakeButton.addEventListener("click", () => {
   const nextFuelRecognition = state.fuelRecognition + 1;
   const nextColdFamiliarity = state.coldFamiliarity + 1;
   state = resetCycle(state);
+  activity = "resting";
+  fuelDiscoveryLogged = true;
   deathShown = false;
   els.deathDialog.close();
   addLog(getWakeMessage(nextFuelRecognition, nextColdFamiliarity));
   render();
 });
+
+function getActivityTitle(): string {
+  if (!state.fuelSourceKnown) return "Get Your Bearings";
+  return activity === "scavenging" ? "Scavenge the Tide-Line" : "Hold Still";
+}
+
+function getRateText(warmthFound: number, scavengeTime: number, coldRate: number): string {
+  const speedNote = speedMultiplier === 5 ? "testing pace" : `${speedMultiplier}x`;
+
+  if (!state.fuelSourceKnown) {
+    const remaining = Math.max(0, BEARINGS_TIME - state.bearingsProgress);
+    return `Tide-line signs in ${remaining.toFixed(1)}s; cold drains ${coldRate.toFixed(1)}/s at ${speedNote}`;
+  }
+
+  return `+${warmthFound} warmth about every ${scavengeTime.toFixed(1)}s; cold drains ${coldRate.toFixed(1)}/s at ${speedNote}`;
+}
+
+function getButtonText(): string {
+  if (!state.fuelSourceKnown) return "Getting Bearings";
+  return activity === "scavenging" ? "Hold Still" : "Scavenge";
+}
 
 function findWoodMessage(currentState: GameState): string {
   const messages: readonly [string, string, string, string] = [

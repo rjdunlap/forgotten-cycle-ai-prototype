@@ -2,20 +2,25 @@ export const MAX_WARMTH = 100;
 export const STARTING_WARMTH = 45;
 export const COLD_RATE = 7;
 export const BASE_SCAVENGE_TIME = 2.4;
+export const BEARINGS_TIME = 3.5;
 export const BASE_WARMTH_FOUND = 9;
 export const FUEL_RECOGNITION_TIME_BONUS = 0.25;
 export const FUEL_RECOGNITION_WARMTH_BONUS = 2;
 export const COLD_FAMILIARITY_RATE_BONUS = 0.02;
 export const MAX_COLD_FAMILIARITY_BONUS = 0.12;
 
+export type Activity = "orienting" | "scavenging" | "resting";
+
 export interface GameState {
   cycle: number;
   innerWarmth: number;
   foundWood: number;
   searchProgress: number;
+  bearingsProgress: number;
   coastalKnowledge: number;
   timeAlive: number;
   alive: boolean;
+  fuelSourceKnown: boolean;
   fuelRecognition: number;
   coldFamiliarity: number;
 }
@@ -26,9 +31,11 @@ export function createGameState(): GameState {
     innerWarmth: STARTING_WARMTH,
     foundWood: 0,
     searchProgress: 0,
+    bearingsProgress: 0,
     coastalKnowledge: 0,
     timeAlive: 0,
     alive: true,
+    fuelSourceKnown: false,
     fuelRecognition: 0,
     coldFamiliarity: 0
   };
@@ -51,15 +58,24 @@ export function getColdRate(state: GameState): number {
   return COLD_RATE * (1 - familiarityBonus);
 }
 
-export function runTick(state: GameState, seconds = 1, isScavenging = true): GameState {
+export function runTick(state: GameState, seconds = 1, activity: Activity = "scavenging"): GameState {
   if (!state.alive) return state;
 
   let foundWood = state.foundWood;
   let searchProgress = state.searchProgress;
+  let bearingsProgress = state.bearingsProgress;
+  let fuelSourceKnown = state.fuelSourceKnown;
   let innerWarmth = state.innerWarmth - getColdRate(state) * seconds;
   const scavengeTime = getScavengeTime(state);
 
-  if (isScavenging) {
+  if (activity === "orienting" && !fuelSourceKnown) {
+    bearingsProgress += seconds;
+    if (bearingsProgress >= BEARINGS_TIME) {
+      fuelSourceKnown = true;
+    }
+  }
+
+  if (activity === "scavenging" && fuelSourceKnown) {
     searchProgress += seconds;
     while (searchProgress >= scavengeTime) {
       searchProgress -= scavengeTime;
@@ -73,8 +89,10 @@ export function runTick(state: GameState, seconds = 1, isScavenging = true): Gam
     innerWarmth: Math.max(0, innerWarmth),
     foundWood,
     searchProgress,
-    coastalKnowledge: state.coastalKnowledge + (isScavenging ? seconds : 0),
+    bearingsProgress,
+    coastalKnowledge: state.coastalKnowledge + (activity !== "resting" ? seconds : 0),
     timeAlive: state.timeAlive + seconds,
+    fuelSourceKnown,
     alive: innerWarmth > 0
   };
 }
@@ -92,9 +110,11 @@ export function resetCycle(state: GameState): GameState {
     innerWarmth: STARTING_WARMTH,
     foundWood: 0,
     searchProgress: 0,
+    bearingsProgress: 0,
     coastalKnowledge: 0,
     timeAlive: 0,
     alive: true,
+    fuelSourceKnown: true,
     fuelRecognition: state.fuelRecognition + 1,
     coldFamiliarity: state.coldFamiliarity + 1
   };

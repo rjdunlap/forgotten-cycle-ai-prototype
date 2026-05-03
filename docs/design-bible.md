@@ -29,7 +29,7 @@ Repository: https://github.com/rjdunlap/forgotten-cycle-ai-prototype
 
 Current slice: "The First Ember"
 
-The player wakes on a cold shore at night. Inner Warmth drains over time. The only action is scavenging the tide-line for wood, brush, or other fuel. Scavenged fuel restores warmth. Eventually the player dies from cold. Death opens a short wake-again popup, then the next life starts with automatic adaptation. Fuel recognition is the main early improvement; cold familiarity exists as a smaller secondary adaptation.
+The player wakes on a cold shore at night. Inner Warmth drains over time. The first activity is `Get Your Bearings`, which reveals signs of usable fuel along the tide-line. The player can then start `Scavenge the Tide-Line` to find wood, brush, or other fuel. Scavenged fuel restores warmth. Eventually the player dies from cold. Death opens a short wake-again popup, then the next life starts with automatic adaptation. Fuel recognition is the main early improvement; cold familiarity exists as a smaller secondary adaptation.
 
 This is testing one question:
 
@@ -39,7 +39,9 @@ This is testing one question:
 
 - `Inner Warmth` starts at 45 out of 100.
 - Cold drains warmth continuously.
-- `Scavenge the Tide-Line` is the only active behavior.
+- The normal simulation pace is slowed down for feel, with `1x`, `5x`, and `10x` testing controls available in the lower-left corner.
+- `Get Your Bearings` is the initial first-life activity.
+- `Scavenge the Tide-Line` becomes available after the player finds signs of usable fuel.
 - Scavenging periodically finds fuel.
 - Fuel restores warmth.
 - Death happens when Inner Warmth reaches zero.
@@ -180,6 +182,8 @@ Use these after Robert or a collaborator tries the current page:
 - Should the player start with "Explore the Shore" before "Scavenge" is available?
 - Should wood increase warmth instantly, slow warmth loss, or feed a separate ember/fire meter?
 - Should the first persistent improvement be better fuel recognition, remembered location, or cold tolerance?
+
+For a living menu of small testing passes, see [initial-testing-todo.md](initial-testing-todo.md).
 
 ## Likely Next Iterations
 
