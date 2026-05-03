@@ -66,7 +66,6 @@ Current implementation files:
 - `src/styles.css`: Tailwind input and small base styles imported by the TypeScript app entry.
 - `src/game.ts`: tiny typed game state and loop logic.
 - `src/app.ts`: typed UI binding and event log.
-- `test/game.test.ts`: lightweight sanity tests retained from earlier work.
 - `.github/workflows/pages.yml`: builds the TypeScript app and deploys `dist/` to GitHub Pages.
 
 ## Research Note: Reincarnation Loop
@@ -231,12 +230,16 @@ Keep these as small playtestable changes, not all at once.
 
 ## Handoff Prompt For A New Code Session
 
+For the current pasteable continuation prompt, use [continuation-prompt.md](continuation-prompt.md). The short version:
+
 ```text
-You are working on the Forgotten Cycle AI Prototype repo. This is a small GitHub Pages browser prototype for an idle/reincarnation RPG inspired primarily by Idle Reincarnator and A Usual Idle Life.
+You are working on the Forgotten Cycle AI Prototype repo. This is a small GitHub Pages browser prototype for an idle/reincarnation RPG inspired by Idle Reincarnator, A Usual Idle Life, and the opening unfolding feel of A Dark Room.
 
-Before changing anything, read README.md and docs/design-bible.md. Pull before you work and push after useful playable changes.
+Before changing anything, read README.md, docs/design-bible.md, docs/initial-testing-todo.md, docs/a-dark-room-reference.md, and docs/visual-systems-bible.md.
 
-Current design target: "The First Ember." The player wakes on a cold shore at night. Inner Warmth drains over time. The player scavenges the tide-line for dry fuel. They die from cold, see a short wake-again popup, and automatically remember the shore better next life. The goal is not to build a full survival game. The goal is to test whether dying from exposure, remembering the coast, and surviving longer next life feels satisfying.
+Current design target: "The First Ember." The player wakes on a strange coast with almost no interface. Get Your Bearings reveals the log, light, body state, wreckage, wood, fire, slower needs, and place hooks as the character understands more. Scavenge the Wreckage collects Wood. Start a Fire / Tend the Fire spends Wood to build Fire. Body Temp, Thirst, and Food exist, but early readouts stay qualitative until a later system-readout gate.
+
+The goal is not to build a full survival game. The goal is to test whether dying from exposure, remembering the coast, and surviving longer next entry feels satisfying.
 
 Important process preference: do not force TDD for this exploratory phase. Human playtesting is the main validation loop. Still run lightweight sanity checks before pushing.
 

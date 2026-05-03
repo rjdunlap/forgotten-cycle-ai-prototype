@@ -27,6 +27,11 @@ export const TEND_FIRE_TIME = 2.8;
 export const FIRE_FROM_WOOD = 28;
 export const FIRE_DECAY_RATE = 3.2;
 export const FIRE_WARM_RATE = 8;
+export const BUILD_WINDBREAK_TIME = 6.2;
+export const WINDBREAK_WOOD_COST = 3;
+export const WINDBREAK_FROM_BUILD = 70;
+export const MAX_WINDBREAK = 100;
+export const MAX_WINDBREAK_PROTECTION = 0.55;
 export const FUEL_RECOGNITION_TIME_BONUS = 0.25;
 export const COLD_FAMILIARITY_RATE_BONUS = 0.02;
 export const MAX_COLD_FAMILIARITY_BONUS = 0.12;
@@ -39,7 +44,7 @@ export const FIREKEEPING_LEVEL_TIME_BONUS = 0.1;
 export const SUNSET_SCAVENGE_EFFICIENCY = 0.65;
 export const NIGHT_SCAVENGE_EFFICIENCY = 0.35;
 
-export type Activity = "orienting" | "scavenging" | "tending";
+export type Activity = "orienting" | "scavenging" | "tending" | "sheltering";
 export type ExposurePhase = "sunlit" | "sunset" | "night";
 export type SeasonalEventWindow = "year-start" | "spring-equinox" | "summer-solstice" | "late-year";
 
@@ -52,6 +57,8 @@ export interface GameState {
   searchProgress: number;
   fireProgress: number;
   fireStrength: number;
+  shelterProgress: number;
+  windbreakStrength: number;
   bearingsProgress: number;
   coastalKnowledge: number;
   shoreSenseXp: number;
@@ -80,6 +87,8 @@ export function createGameState(): GameState {
     searchProgress: 0,
     fireProgress: 0,
     fireStrength: 0,
+    shelterProgress: 0,
+    windbreakStrength: 0,
     bearingsProgress: 0,
     coastalKnowledge: 0,
     shoreSenseXp: 0,
@@ -161,6 +170,10 @@ export function getTendFireTime(state: GameState): number {
   return Math.max(1.2, TEND_FIRE_TIME - getFirekeepingLevel(state) * FIREKEEPING_LEVEL_TIME_BONUS);
 }
 
+export function getBuildWindbreakTime(_state: GameState): number {
+  return BUILD_WINDBREAK_TIME;
+}
+
 export function hasLightReadout(state: GameState): boolean {
   return getShoreSenseLevel(state) >= 2 || state.maxShoreSenseLevel >= 2;
 }
@@ -225,7 +238,7 @@ export function getColdRate(state: GameState): number {
     getShoreSenseLevel(state) * SHORE_SENSE_COLD_RATE_BONUS
   );
 
-  return COLD_RATE * phaseMultiplier * (1 - familiarityBonus - shoreSenseBonus);
+  return COLD_RATE * phaseMultiplier * (1 - familiarityBonus - shoreSenseBonus) * (1 - getWindbreakProtection(state));
 }
 
 export function getSunWarmRate(state: GameState): number {
@@ -245,7 +258,12 @@ export function getJungleThreat(state: GameState): number {
 }
 
 export function getHeatRate(state: GameState): number {
-  return getExposurePhase(state) === "sunlit" && getTimeInDay(state) >= getDawnEnd(state) ? HEAT_RATE : 0;
+  const phaseHeat = getExposurePhase(state) === "sunlit" && getTimeInDay(state) >= getDawnEnd(state) ? HEAT_RATE : 0;
+  return phaseHeat * (1 - getWindbreakProtection(state));
+}
+
+export function getWindbreakProtection(state: GameState): number {
+  return Math.min(MAX_WINDBREAK_PROTECTION, (state.windbreakStrength / MAX_WINDBREAK) * MAX_WINDBREAK_PROTECTION);
 }
 
 export function getScavengeLightEfficiency(state: GameState): number {
@@ -262,6 +280,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   let searchProgress = state.searchProgress;
   let fireProgress = state.fireProgress;
   let fireStrength = Math.max(0, state.fireStrength - FIRE_DECAY_RATE * seconds);
+  let shelterProgress = state.shelterProgress;
+  let windbreakStrength = state.windbreakStrength;
   let bearingsProgress = state.bearingsProgress;
   let shoreSenseXp = state.shoreSenseXp;
   let maxShoreSenseLevel = state.maxShoreSenseLevel;
@@ -315,8 +335,16 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
       firekeepingXp += 1;
       maxFirekeepingLevel = Math.max(maxFirekeepingLevel, getActionLevel(firekeepingXp));
     }
-  } else if (activity !== "tending") {
-    fireProgress = 0;
+  }
+
+  const buildWindbreakTime = getBuildWindbreakTime(state);
+  if (activity === "sheltering" && foundWood >= WINDBREAK_WOOD_COST && windbreakStrength < MAX_WINDBREAK) {
+    shelterProgress += seconds;
+    while (shelterProgress >= buildWindbreakTime && foundWood >= WINDBREAK_WOOD_COST && windbreakStrength < MAX_WINDBREAK) {
+      shelterProgress -= buildWindbreakTime;
+      foundWood -= WINDBREAK_WOOD_COST;
+      windbreakStrength = Math.min(MAX_WINDBREAK, windbreakStrength + WINDBREAK_FROM_BUILD);
+    }
   }
 
   return {
@@ -328,6 +356,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
     searchProgress,
     fireProgress,
     fireStrength,
+    shelterProgress,
+    windbreakStrength,
     bearingsProgress,
     shoreSenseXp,
     maxShoreSenseLevel,
@@ -359,6 +389,8 @@ export function resetCycle(state: GameState): GameState {
     searchProgress: 0,
     fireProgress: 0,
     fireStrength: 0,
+    shelterProgress: 0,
+    windbreakStrength: 0,
     bearingsProgress: 0,
     coastalKnowledge: 0,
     shoreSenseXp: 0,

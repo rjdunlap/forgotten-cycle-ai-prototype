@@ -27,7 +27,7 @@
                 <span>Body Temp</span>
                 <span id="warmthText" class="text-xs uppercase text-ember-muted">low</span>
               </div>
-              <div id="exposureBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Body Temperature">
+              <div id="exposureBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Body Temperature" hidden>
                 <div id="warmthBar" class="meter-fill h-full"></div>
               </div>
               <div id="thirstRow" class="flex items-center justify-between gap-3 pt-1" hidden>
@@ -57,6 +57,10 @@
             <div id="fireSupplyRow" class="flex items-center justify-between gap-3" hidden>
               <span>Fire</span>
               <span id="fireText" class="text-xs uppercase">0 / 100</span>
+            </div>
+            <div id="windbreakSupplyRow" class="flex items-center justify-between gap-3" hidden>
+              <span>Windbreak</span>
+              <span id="windbreakText" class="text-xs uppercase">none</span>
             </div>
           </div>
         </div>
@@ -107,6 +111,19 @@
           </span>
           <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
             <span id="fireProgressBar" class="meter-fill block h-full bg-ember-red"></span>
+          </span>
+        </button>
+
+        <button id="windbreakButton" class="action-card" type="button" disabled hidden>
+          <span class="flex items-start justify-between gap-3">
+            <span>
+              <strong id="windbreakTitle" class="block text-sm">Raise a Windbreak</strong>
+              <span id="windbreakDetail" class="block text-xs font-normal text-ember-muted">Lean wreckage against the wind and leave a strip of shade.</span>
+            </span>
+            <span id="windbreakStatus" class="text-xs text-ember-muted">No Wood</span>
+          </span>
+          <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
+            <span id="windbreakProgressBar" class="meter-fill block h-full bg-ember-accent"></span>
           </span>
         </button>
 

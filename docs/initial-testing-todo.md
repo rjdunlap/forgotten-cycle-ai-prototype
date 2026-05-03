@@ -320,6 +320,11 @@ Follow-up:
 - Put early action levels adjacent to the action title, such as `Get Your Bearings - Lv 1`, while keeping the detail line narrative. Push XP/mastery readouts closer to Lv 10.
 - Move Light unlock to `Get Your Bearings` Lv 2.
 - Use `Get Your Bearings` Lv 10 as the global system-readout gate. Before then, all action detail lines should stay narrative and avoid XP, timings, output rates, and mastery math.
+- Keep early Body readouts qualitative until the system-readout gate: words like `shivering`, `dry`, and `thin` should appear before bars or exact values.
+- Removed early countdown seconds from `Get Your Bearings` detail copy so the opening timer feels like waiting and perception, not exposed system math.
+- Added a small `Raise a Windbreak` pass: wreckage wood can become a rough current-entry structure that softens both cold and heat without opening a broader shelter-building system yet.
+- Tuned windbreak after playtest: one wood felt too cheap and too weak, so each build now needs a 3-wood bundle and gives stronger heat/cold protection.
+- Tuned fire tending after playtest: partial tending progress now persists when switching away, while an existing fire's row keeps showing flame strength so clicking back does not visually pull the bar backward.
 
 ### Pass 5F: A Dark Room Opening Discipline
 

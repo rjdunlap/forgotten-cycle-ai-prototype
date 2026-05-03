@@ -2,10 +2,13 @@ import {
   MAX_FOOD,
   MAX_THIRST,
   MAX_WARMTH,
+  MAX_WINDBREAK,
+  WINDBREAK_WOOD_COST,
   COMFORT_WARMTH,
   type Activity,
   canReset,
   createGameState,
+  getBuildWindbreakTime,
   getBearingsTime,
   getColdRate,
   getDayNumber,
@@ -25,6 +28,7 @@ import {
   getSunWarmRate,
   getTendFireTime,
   getTimeInDay,
+  getWindbreakProtection,
   getWoodFound,
   hasLightReadout,
   resetCycle,
@@ -54,8 +58,10 @@ const els = {
   conditionDetail: requiredElement<HTMLElement>("#conditionDetail"),
   suppliesSection: requiredElement<HTMLElement>("#suppliesSection"),
   fireSupplyRow: requiredElement<HTMLElement>("#fireSupplyRow"),
+  windbreakSupplyRow: requiredElement<HTMLElement>("#windbreakSupplyRow"),
   woodText: requiredElement<HTMLElement>("#woodText"),
   fireText: requiredElement<HTMLElement>("#fireText"),
+  windbreakText: requiredElement<HTMLElement>("#windbreakText"),
   orientButton: requiredElement<HTMLButtonElement>("#orientButton"),
   orientTitle: requiredElement<HTMLElement>("#orientTitle"),
   orientDetail: requiredElement<HTMLElement>("#orientDetail"),
@@ -71,6 +77,11 @@ const els = {
   fireDetail: requiredElement<HTMLElement>("#fireDetail"),
   fireStatus: requiredElement<HTMLElement>("#fireStatus"),
   fireProgressBar: requiredElement<HTMLElement>("#fireProgressBar"),
+  windbreakButton: requiredElement<HTMLButtonElement>("#windbreakButton"),
+  windbreakTitle: requiredElement<HTMLElement>("#windbreakTitle"),
+  windbreakDetail: requiredElement<HTMLElement>("#windbreakDetail"),
+  windbreakStatus: requiredElement<HTMLElement>("#windbreakStatus"),
+  windbreakProgressBar: requiredElement<HTMLElement>("#windbreakProgressBar"),
   placesSection: requiredElement<HTMLElement>("#placesSection"),
   tidePlaceButton: requiredElement<HTMLButtonElement>("#tidePlaceButton"),
   junglePlaceButton: requiredElement<HTMLButtonElement>("#junglePlaceButton"),
@@ -93,6 +104,7 @@ let lastTick = performance.now();
 let deathShown = false;
 let fuelDiscoveryLogged = false;
 let firstFireLogged = false;
+let firstWindbreakLogged = false;
 let jungleNoiseStage = 0;
 let lastExposurePhase = getExposurePhase(state);
 
@@ -126,6 +138,7 @@ function render(): void {
   const bearingsTime = getBearingsTime(state);
   const scavengeTime = getScavengeTime(state);
   const tendFireTime = getTendFireTime(state);
+  const buildWindbreakTime = getBuildWindbreakTime(state);
   const woodFound = getWoodFound(state);
   const coldRate = getColdRate(state);
   const heatRate = getHeatRate(state);
@@ -141,10 +154,13 @@ function render(): void {
   const orientPercent = Math.min(100, (state.bearingsProgress / bearingsTime) * 100);
   const scavengePercent = state.fuelSourceKnown ? Math.min(100, (state.searchProgress / scavengeTime) * 100) : 0;
   const tendPercent = state.foundWood >= 1 ? Math.min(100, (state.fireProgress / tendFireTime) * 100) : 0;
+  const windbreakPercent =
+    state.foundWood >= WINDBREAK_WOOD_COST ? Math.min(100, (state.shelterProgress / buildWindbreakTime) * 100) : 0;
   const logKnown = hasLogReadout();
   const bodyKnown = hasBodyReadout();
   const needsKnown = hasNeedsReadout();
   const fireKnown = hasFireReadout();
+  const windbreakKnown = hasWindbreakReadout();
   const tidePlaceKnown = hasTidePlaceReadout();
   const junglePlaceKnown = hasJunglePlaceReadout();
   const systemKnown = hasSystemReadout();
@@ -162,6 +178,7 @@ function render(): void {
   els.foodBarRow.hidden = !needsKnown || !systemKnown;
   els.suppliesSection.hidden = !hasFuelReadout();
   els.fireSupplyRow.hidden = !fireKnown;
+  els.windbreakSupplyRow.hidden = !windbreakKnown;
   els.placesSection.hidden = !tidePlaceKnown && !junglePlaceKnown;
   els.tidePlaceButton.hidden = !tidePlaceKnown;
   els.junglePlaceButton.hidden = !junglePlaceKnown;
@@ -178,9 +195,10 @@ function render(): void {
   els.thirstText.textContent = getThirstLabel(state.thirst, systemKnown);
   els.foodBar.style.width = `${foodPercent}%`;
   els.foodText.textContent = getFoodLabel(state.food, systemKnown);
-  els.conditionDetail.textContent = getConditionDetail(coldRate, heatRate, sunWarmRate, fireWarmRate);
+  els.conditionDetail.textContent = getConditionDetail(coldRate, heatRate, sunWarmRate, fireWarmRate, getWindbreakProtection(state));
   els.woodText.textContent = formatWood(state.foundWood);
   els.fireText.textContent = `${Math.ceil(state.fireStrength)} / ${MAX_WARMTH}`;
+  els.windbreakText.textContent = getWindbreakLabel(state.windbreakStrength, systemKnown);
 
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
@@ -204,7 +222,16 @@ function render(): void {
     firekeepingLevel > 0 || state.fireStrength > 0 ? getActionTitle("Tend the Fire", firekeepingLevel) : "Start a Fire";
   els.fireDetail.textContent = getFireDetail(firekeepingLevel, tendFireTime, firekeepingMasteryBonus);
   els.fireStatus.textContent = getActionStatus("tending");
-  els.fireProgressBar.style.width = `${activity === "tending" ? tendPercent : firePercent}%`;
+  els.fireProgressBar.style.width = `${state.fireStrength > 0 ? firePercent : tendPercent}%`;
+
+  els.windbreakButton.hidden = !windbreakKnown;
+  els.windbreakButton.disabled =
+    !state.alive || !state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK;
+  els.windbreakButton.setAttribute("aria-pressed", String(activity === "sheltering"));
+  els.windbreakTitle.textContent = "Raise a Windbreak";
+  els.windbreakDetail.textContent = getWindbreakDetail(buildWindbreakTime, getWindbreakProtection(state));
+  els.windbreakStatus.textContent = getActionStatus("sheltering");
+  els.windbreakProgressBar.style.width = `${windbreakPercent}%`;
 
   els.app.hidden = !state.alive;
   els.app.classList.toggle("opacity-20", !state.alive);
@@ -224,6 +251,7 @@ function tick(now: number): void {
   if (!canReset(state)) {
     const previousWood = state.foundWood;
     const previousFire = state.fireStrength;
+    const previousWindbreak = state.windbreakStrength;
     const previousShoreSenseXp = state.shoreSenseXp;
     const previousShoreSenseLevel = getShoreSenseLevel(state);
     const previousScavengeLevel = getScavengeLevel(state);
@@ -273,6 +301,15 @@ function tick(now: number): void {
       }
     }
 
+    if (state.windbreakStrength > previousWindbreak + 1) {
+      if (!firstWindbreakLogged) {
+        firstWindbreakLogged = true;
+        addLog("The wreckage stands unevenly, but the wind breaks around it.");
+      } else {
+        addLog("Another plank finds its place. The shore gives you a little less weather.");
+      }
+    }
+
     addJungleNoiseLogs(previousJungleThreat, getJungleThreat(state));
 
     if (getFirekeepingLevel(state) > previousFirekeepingLevel) {
@@ -318,6 +355,15 @@ els.fireButton.addEventListener("click", () => {
   render();
 });
 
+els.windbreakButton.addEventListener("click", () => {
+  if (!state.alive) return;
+  if (!state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK) return;
+
+  activity = "sheltering";
+  addLog(state.windbreakStrength > 0 ? "You press more wreckage into the rough windbreak." : "You drag planks above the wash and make the wind go around you.");
+  render();
+});
+
 for (const button of els.speedButtons) {
   button.addEventListener("click", () => {
     const nextSpeed = Number(button.dataset.speed);
@@ -336,6 +382,7 @@ els.wakeButton.addEventListener("click", () => {
   activity = "orienting";
   fuelDiscoveryLogged = state.fuelSourceKnown;
   firstFireLogged = false;
+  firstWindbreakLogged = false;
   jungleNoiseStage = 0;
   lastExposurePhase = getExposurePhase(state);
   deathShown = false;
@@ -351,6 +398,7 @@ function getActivitySummary(): string {
   if (!hasFuelReadout()) return "An entry is forming.";
   if (activity === "orienting") return "Reading the shore.";
   if (activity === "scavenging") return "Sorting the wreckage.";
+  if (activity === "sheltering") return "Raising a windbreak.";
   return state.fireStrength > 0 ? "Keeping the dark back." : "Making a first fire.";
 }
 
@@ -363,7 +411,7 @@ function getActionTitle(label: string, level: number): string {
 function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: number): string {
   const remaining = Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1);
   if (level < 1) {
-    return `Hold still until one clear thing reaches you in ${remaining}s.`;
+    return "Hold still until one clear thing reaches you.";
   }
 
   if (level < 2) {
@@ -375,7 +423,7 @@ function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: nu
   }
 
   if (level < 10) {
-    return `Read the shore for the next useful pattern in ${remaining}s.`;
+    return "Keep reading the shore for the next useful pattern.";
   }
 
   return `Progress ${formatLevelProgress(state.shoreSenseXp)} - next insight in ${remaining}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
@@ -408,6 +456,19 @@ function getFireDetail(level: number, tendFireTime: number, masteryBonus: number
   }
 
   return `Progress ${formatLevelProgress(state.firekeepingXp)} - spend 1 wood in ${tendFireTime.toFixed(1)}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
+}
+
+function getWindbreakDetail(buildWindbreakTime: number, protection: number): string {
+  const remaining = Math.max(0, buildWindbreakTime - state.shelterProgress).toFixed(1);
+  if (state.windbreakStrength >= MAX_WINDBREAK) return "The rough wall is as solid as loose wreckage can make it.";
+  if (state.foundWood < WINDBREAK_WOOD_COST) return "Gather a real bundle of wreckage before trying to make shelter.";
+
+  if (!hasSystemReadout()) {
+    if (state.windbreakStrength <= 0) return "Lean wreckage against the wind and leave a strip of shade.";
+    return "Tighten the rough wall where wind and sun still find you.";
+  }
+
+  return `Spend ${WINDBREAK_WOOD_COST} wood in ${remaining}s. Heat and cold pressure -${Math.round(protection * 100)}%.`;
 }
 
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
@@ -508,6 +569,14 @@ function getFoodLabel(food: number, systemKnown = hasSystemReadout()): string {
   return "quiet";
 }
 
+function getWindbreakLabel(strength: number, systemKnown = hasSystemReadout()): string {
+  if (systemKnown) return `${Math.ceil(strength)} / ${MAX_WINDBREAK}`;
+  if (strength <= 0) return "none";
+  if (strength < 75) return "rough";
+  if (strength < MAX_WINDBREAK) return "holding";
+  return "sheltered";
+}
+
 function getBodyTemperatureColor(bodyTemperature: number): string {
   if (bodyTemperature < 30) return "#4f8fd6";
   if (bodyTemperature > 70) return "#b54b3f";
@@ -541,6 +610,10 @@ function hasFireReadout(): boolean {
   return hasFuelReadout() && (state.foundWood >= 1 || state.fireStrength > 0 || getFirekeepingLevel(state) > 0 || state.maxFirekeepingLevel > 0);
 }
 
+function hasWindbreakReadout(): boolean {
+  return hasFuelReadout() && (state.foundWood >= 1 || state.windbreakStrength > 0);
+}
+
 function hasTidePlaceReadout(): boolean {
   return getShoreSenseLevel(state) >= 3 || state.maxShoreSenseLevel >= 3;
 }
@@ -557,7 +630,10 @@ function getActionStatus(action: Activity): string {
   if (!state.alive) return "Stopped";
   if (action === "scavenging" && !state.fuelSourceKnown) return "Locked";
   if (action === "tending" && !state.fuelSourceKnown) return "Locked";
+  if (action === "sheltering" && !state.fuelSourceKnown) return "Locked";
   if (action === "tending" && state.foundWood < 1) return "No Wood";
+  if (action === "sheltering" && state.windbreakStrength >= MAX_WINDBREAK) return "Built";
+  if (action === "sheltering" && state.foundWood < WINDBREAK_WOOD_COST) return `Need ${WINDBREAK_WOOD_COST} Wood`;
   if (action === "orienting" && activity !== action) {
     return "Idle";
   }
@@ -565,6 +641,9 @@ function getActionStatus(action: Activity): string {
     return "Idle";
   }
   if (action === "tending" && activity !== action) {
+    return "Idle";
+  }
+  if (action === "sheltering" && activity !== action) {
     return "Idle";
   }
   return activity === action ? "Active" : "Idle";
@@ -580,10 +659,11 @@ function getLightLabel(): string {
   return `${dayPrefix}gone`;
 }
 
-function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: number, fireWarmRate: number): string {
+function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: number, fireWarmRate: number, windbreakProtection: number): string {
   const phase = getExposurePhase(state);
   const needsKnown = hasNeedsReadout();
   const systemKnown = hasSystemReadout();
+  const hasWindbreak = windbreakProtection > 0;
 
   if (phase === "sunlit") {
     if (!hasLightReadout(state)) {
@@ -591,11 +671,14 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
     }
     if (getTimeInDay(state) < getDawnEnd(state)) {
       if (!systemKnown) {
+        if (hasWindbreak) return `Dawn warms the rough shelter. Wind passes around it instead of through you.`;
         return needsKnown
           ? `Dawn keeps the chill off, though your mouth and belly are beginning to report in.`
           : `Dawn keeps the worst chill off your skin.`;
       }
-      return `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s.`;
+      return hasWindbreak
+        ? `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
+        : `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s.`;
     }
     if (getDayNumber(state) > 1) {
       if (!systemKnown) {
@@ -603,34 +686,47 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
           ? `The returning sun warms you, but the heat asks for water.`
           : `The returning sun holds the shore in a livable glare.`;
       }
-      return `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
+      return hasWindbreak
+        ? `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
+        : `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
     }
     if (!systemKnown) {
+      if (hasWindbreak) return `The sun leans hard on the shore, but the rough wall keeps a little shade.`;
       return needsKnown ? `The day warms you, but the heat asks for water.` : `The day holds the shore in a livable glare.`;
     }
-    return `The day pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
+    return hasWindbreak
+      ? `The day pushes body temp +${heatRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
+      : `The day pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
   }
 
   if (phase === "sunset") {
     if (!systemKnown) {
+      if (hasWindbreak) return `The light is leaving. Cold finds the gaps, but not your whole skin.`;
       return needsKnown
         ? `The light is leaving. Cold creeps in, and hunger makes it sharper.`
         : `The light is leaving, and the shore stops helping.`;
     }
-    return `The light is leaving. Cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
+    return hasWindbreak
+      ? `The light is leaving. Windbreak softens the cold to -${coldRate.toFixed(1)}/s.`
+      : `The light is leaving. Cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
   }
 
   if (getJungleThreat(state) >= 75) {
     if (!systemKnown) {
       return `The fire is losing its luster. The jungle grows louder at the edge of the light.`;
     }
-    return `The fire is losing its luster. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; cold and the jungle press in.`;
+    return hasWindbreak
+      ? `The fire is losing its luster. Windbreak softens the cold; the jungle still presses in.`
+      : `The fire is losing its luster. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; cold and the jungle press in.`;
   }
 
   if (!systemKnown) {
+    if (hasWindbreak) return `Firelight and wreckage make a small shape the night has to move around.`;
     return `Firelight holds close. Past it, the dark keeps moving.`;
   }
-  return `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Cold pulls body temp -${coldRate.toFixed(1)}/s.`;
+  return hasWindbreak
+    ? `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Windbreak softens the cold to -${coldRate.toFixed(1)}/s.`
+    : `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Cold pulls body temp -${coldRate.toFixed(1)}/s.`;
 }
 
 function getScavengeLightNote(efficiency: number): string {
