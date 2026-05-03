@@ -83,11 +83,14 @@ const els = {
   windbreakStatus: requiredElement<HTMLElement>("#windbreakStatus"),
   windbreakProgressBar: requiredElement<HTMLElement>("#windbreakProgressBar"),
   placesSection: requiredElement<HTMLElement>("#placesSection"),
+  campSiteButton: requiredElement<HTMLButtonElement>("#campSiteButton"),
+  wreckSiteButton: requiredElement<HTMLButtonElement>("#wreckSiteButton"),
   tidePlaceButton: requiredElement<HTMLButtonElement>("#tidePlaceButton"),
   junglePlaceButton: requiredElement<HTMLButtonElement>("#junglePlaceButton"),
   speedButtons: [...document.querySelectorAll<HTMLButtonElement>(".speedButton")],
   logSection: requiredElement<HTMLElement>("#logSection"),
   log: requiredElement<HTMLOListElement>("#log"),
+  pageFrame: requiredElement<HTMLElement>("#pageFrame"),
   app: requiredElement<HTMLElement>("#app"),
   deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
   deathTitle: requiredElement<HTMLElement>("#deathTitle"),
@@ -97,8 +100,11 @@ const els = {
   wakeButton: requiredElement<HTMLButtonElement>("#wakeButton")
 };
 
+type Site = "camp" | "wreckage" | "tide" | "jungle";
+
 let state = createGameState();
 let activity: Activity = "orienting";
+let currentSite: Site = "camp";
 let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
@@ -161,13 +167,17 @@ function render(): void {
   const needsKnown = hasNeedsReadout();
   const fireKnown = hasFireReadout();
   const windbreakKnown = hasWindbreakReadout();
+  const wreckKnown = hasWreckageSiteReadout();
   const tidePlaceKnown = hasTidePlaceReadout();
   const junglePlaceKnown = hasJunglePlaceReadout();
+  const placesKnown = wreckKnown || tidePlaceKnown || junglePlaceKnown || currentSite !== "camp";
   const systemKnown = hasSystemReadout();
 
   els.cycle.textContent = `Entry ${toRoman(state.cycle)}`;
   els.bodySection.hidden = !bodyKnown;
   els.logSection.hidden = !logKnown;
+  els.pageFrame.classList.toggle("page-frame-compact", !logKnown);
+  els.pageFrame.classList.toggle("page-frame-expanded", logKnown);
   els.app.classList.toggle("app-shell-compact", !logKnown);
   els.app.classList.toggle("app-shell-expanded", logKnown);
   els.lightRow.hidden = !hasLightReadout(state);
@@ -179,9 +189,15 @@ function render(): void {
   els.suppliesSection.hidden = !hasFuelReadout();
   els.fireSupplyRow.hidden = !fireKnown;
   els.windbreakSupplyRow.hidden = !windbreakKnown;
-  els.placesSection.hidden = !tidePlaceKnown && !junglePlaceKnown;
-  els.tidePlaceButton.hidden = !tidePlaceKnown;
-  els.junglePlaceButton.hidden = !junglePlaceKnown;
+  els.placesSection.hidden = !placesKnown;
+  els.campSiteButton.hidden = currentSite === "camp";
+  els.wreckSiteButton.hidden = !wreckKnown || currentSite === "wreckage";
+  els.tidePlaceButton.hidden = !tidePlaceKnown || currentSite === "tide";
+  els.junglePlaceButton.hidden = !junglePlaceKnown || currentSite === "jungle";
+  els.campSiteButton.disabled = !state.alive;
+  els.wreckSiteButton.disabled = !state.alive;
+  els.tidePlaceButton.disabled = !state.alive;
+  els.junglePlaceButton.disabled = !state.alive;
   els.lightText.textContent = getLightLabel();
   els.activitySummary.textContent = getActivitySummary();
   els.warmthBar.style.width = `${bodyTemperaturePercent}%`;
@@ -200,6 +216,7 @@ function render(): void {
   els.fireText.textContent = `${Math.ceil(state.fireStrength)} / ${MAX_WARMTH}`;
   els.windbreakText.textContent = getWindbreakLabel(state.windbreakStrength, systemKnown);
 
+  els.orientButton.hidden = !isActionAvailableAtSite("orienting");
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
   els.orientTitle.textContent = getActionTitle("Get Your Bearings", shoreSenseLevel);
@@ -207,7 +224,7 @@ function render(): void {
   els.orientStatus.textContent = getActionStatus("orienting");
   els.orientProgressBar.style.width = `${orientPercent}%`;
 
-  els.scavengeButton.hidden = !hasFuelReadout();
+  els.scavengeButton.hidden = !hasFuelReadout() || !isActionAvailableAtSite("scavenging");
   els.scavengeButton.disabled = !state.alive || !state.fuelSourceKnown;
   els.scavengeButton.setAttribute("aria-pressed", String(activity === "scavenging"));
   els.scavengeTitle.textContent = getActionTitle("Scavenge the Wreckage", scavengeLevel);
@@ -215,7 +232,7 @@ function render(): void {
   els.scavengeStatus.textContent = getActionStatus("scavenging");
   els.scavengeProgressBar.style.width = `${scavengePercent}%`;
 
-  els.fireButton.hidden = !fireKnown;
+  els.fireButton.hidden = !fireKnown || !isActionAvailableAtSite("tending");
   els.fireButton.disabled = !state.alive || !state.fuelSourceKnown || state.foundWood < 1;
   els.fireButton.setAttribute("aria-pressed", String(activity === "tending"));
   els.fireTitle.textContent =
@@ -224,7 +241,7 @@ function render(): void {
   els.fireStatus.textContent = getActionStatus("tending");
   els.fireProgressBar.style.width = `${state.fireStrength > 0 ? firePercent : tendPercent}%`;
 
-  els.windbreakButton.hidden = !windbreakKnown;
+  els.windbreakButton.hidden = !windbreakKnown || !isActionAvailableAtSite("sheltering");
   els.windbreakButton.disabled =
     !state.alive || !state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK;
   els.windbreakButton.setAttribute("aria-pressed", String(activity === "sheltering"));
@@ -259,7 +276,8 @@ function tick(now: number): void {
     const knewFuelSource = state.fuelSourceKnown;
     const previousExposurePhase = lastExposurePhase;
     const previousJungleThreat = getJungleThreat(state);
-    state = runTick(state, elapsed, activity);
+    const activeActivity = isActionAvailableAtSite(activity) ? activity : "orienting";
+    state = runTick(state, elapsed, activeActivity);
     lastExposurePhase = getExposurePhase(state);
 
     if (!knewFuelSource && state.fuelSourceKnown && !fuelDiscoveryLogged) {
@@ -327,6 +345,7 @@ function tick(now: number): void {
 
 els.orientButton.addEventListener("click", () => {
   if (!state.alive) return;
+  if (!isActionAvailableAtSite("orienting")) return;
 
   activity = "orienting";
   addLog(
@@ -340,6 +359,7 @@ els.orientButton.addEventListener("click", () => {
 els.scavengeButton.addEventListener("click", () => {
   if (!state.alive) return;
   if (!state.fuelSourceKnown) return;
+  if (!isActionAvailableAtSite("scavenging")) return;
 
   activity = "scavenging";
   addLog("You pick through the wreckage for anything useful. Dry pieces go aside for fire or shelter.");
@@ -349,6 +369,7 @@ els.scavengeButton.addEventListener("click", () => {
 els.fireButton.addEventListener("click", () => {
   if (!state.alive) return;
   if (!state.fuelSourceKnown || state.foundWood < 1) return;
+  if (!isActionAvailableAtSite("tending")) return;
 
   activity = "tending";
   addLog(state.fireStrength > 0 ? "You crouch near the coals and feed the fire." : "You clear a place above the wash and try to make the first fire.");
@@ -358,10 +379,27 @@ els.fireButton.addEventListener("click", () => {
 els.windbreakButton.addEventListener("click", () => {
   if (!state.alive) return;
   if (!state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK) return;
+  if (!isActionAvailableAtSite("sheltering")) return;
 
   activity = "sheltering";
   addLog(state.windbreakStrength > 0 ? "You press more wreckage into the rough windbreak." : "You drag planks above the wash and make the wind go around you.");
   render();
+});
+
+els.campSiteButton.addEventListener("click", () => {
+  goToSite("camp");
+});
+
+els.wreckSiteButton.addEventListener("click", () => {
+  goToSite("wreckage");
+});
+
+els.tidePlaceButton.addEventListener("click", () => {
+  goToSite("tide");
+});
+
+els.junglePlaceButton.addEventListener("click", () => {
+  goToSite("jungle");
 });
 
 for (const button of els.speedButtons) {
@@ -380,6 +418,7 @@ els.wakeButton.addEventListener("click", () => {
   const nextColdFamiliarity = state.coldFamiliarity + 1;
   state = resetCycle(state);
   activity = "orienting";
+  currentSite = "camp";
   fuelDiscoveryLogged = state.fuelSourceKnown;
   firstFireLogged = false;
   firstWindbreakLogged = false;
@@ -396,10 +435,57 @@ function getActivitySummary(): string {
   if (!state.alive) return "Ended";
   if (!hasLogReadout()) return "The shore is bright.";
   if (!hasFuelReadout()) return "An entry is forming.";
-  if (activity === "orienting") return "Reading the shore.";
+  if (activity === "orienting") return getSiteSummary();
   if (activity === "scavenging") return "Sorting the wreckage.";
   if (activity === "sheltering") return "Raising a windbreak.";
   return state.fireStrength > 0 ? "Keeping the dark back." : "Making a first fire.";
+}
+
+function getSiteSummary(): string {
+  if (currentSite === "camp") return "At camp.";
+  if (currentSite === "wreckage") return "At the wreckage.";
+  if (currentSite === "tide") return "At the tide-line.";
+  return "At the jungle line.";
+}
+
+function goToSite(site: Site): void {
+  if (!state.alive || currentSite === site) return;
+
+  const previousSite = currentSite;
+  currentSite = site;
+  activity = getDefaultActivityForSite(site);
+  addLog(getSiteTravelMessage(previousSite, site));
+  render();
+}
+
+function getDefaultActivityForSite(site: Site): Activity {
+  if (site === "wreckage") return "scavenging";
+  return "orienting";
+}
+
+function isActionAvailableAtSite(action: Activity): boolean {
+  if (action === "orienting") return true;
+  if (action === "scavenging") return currentSite === "wreckage";
+  if (action === "tending" || action === "sheltering") return currentSite === "camp";
+  return false;
+}
+
+function getSiteTravelMessage(previousSite: Site, nextSite: Site): string {
+  if (nextSite === "camp") {
+    return previousSite === "wreckage"
+      ? "You leave the broken planks and return to the small place you can defend."
+      : "You follow your own marks back to camp.";
+  }
+
+  if (nextSite === "wreckage") {
+    return "You move along the foam to the broken ribs of the wreckage.";
+  }
+
+  if (nextSite === "tide") {
+    return "You follow the high-water mark where the shore keeps its finds.";
+  }
+
+  return "You stop at the jungle line and listen before stepping closer.";
 }
 
 function getActionTitle(label: string, level: number): string {
@@ -473,7 +559,7 @@ function getWindbreakDetail(buildWindbreakTime: number, protection: number): str
 
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
   if (previousLevel < 1 && currentLevel >= 1) {
-    return "Light breaks white behind your eyelids. Something cold drags past your legs and pulls away.";
+    return "A pale haze clings to everything. The shore is a smear of light, salt, and panic.";
   }
 
   if (completions === 2) {
@@ -591,7 +677,7 @@ function formatLevelProgress(xp: number): string {
 }
 
 function hasLogReadout(): boolean {
-  return getShoreSenseLevel(state) >= 1 || state.maxShoreSenseLevel >= 1;
+  return getShoreSenseLevel(state) >= 1;
 }
 
 function hasBodyReadout(): boolean {
@@ -599,11 +685,15 @@ function hasBodyReadout(): boolean {
 }
 
 function hasNeedsReadout(): boolean {
-  return getShoreSenseLevel(state) >= 3 || state.maxShoreSenseLevel >= 3;
+  return getShoreSenseLevel(state) >= 3;
 }
 
 function hasFuelReadout(): boolean {
-  return getShoreSenseLevel(state) >= 2 || state.maxShoreSenseLevel >= 2;
+  return getShoreSenseLevel(state) >= 2;
+}
+
+function hasWreckageSiteReadout(): boolean {
+  return hasFuelReadout();
 }
 
 function hasFireReadout(): boolean {
@@ -615,15 +705,15 @@ function hasWindbreakReadout(): boolean {
 }
 
 function hasTidePlaceReadout(): boolean {
-  return getShoreSenseLevel(state) >= 3 || state.maxShoreSenseLevel >= 3;
+  return getShoreSenseLevel(state) >= 3;
 }
 
 function hasJunglePlaceReadout(): boolean {
-  return getShoreSenseLevel(state) >= 4 || state.maxShoreSenseLevel >= 4;
+  return getShoreSenseLevel(state) >= 4;
 }
 
 function hasSystemReadout(): boolean {
-  return getShoreSenseLevel(state) >= 10 || state.maxShoreSenseLevel >= 10;
+  return getShoreSenseLevel(state) >= 10;
 }
 
 function getActionStatus(action: Activity): string {
@@ -851,18 +941,18 @@ function getWakeMessages(
   if (!rememberedFuelSource) {
     return [
       "Three gull-cries. One broken wave. You wake on the same shore.",
-      "The cold is familiar, but the tide-line still needs reading."
+      "A haze lies over the first moments. The cold is familiar, but the tide-line still needs reading."
     ];
   }
 
   const messages: readonly string[][] = [
     [
       "Three gull-cries. One broken wave. The same salt wind opens your eyes.",
-      "Before you look, you know where the first kindling will be."
+      "The haze thins around one practical certainty: before you look, you know where the first kindling will be."
     ],
     [
       "Three gull-cries. One broken wave. The shore repeats itself exactly.",
-      "Your hands know what will burn. The wind bites, but not quite as deeply."
+      "The haze is still there, but your hands know what will burn. The wind bites, but not quite as deeply."
     ],
     [
       "Three gull-cries. One broken wave. The loop has a rhythm now.",
@@ -873,7 +963,7 @@ function getWakeMessages(
   const messageIndex = Math.min(fuelRecognition - 1, messages.length - 1);
   return messages[messageIndex] ?? [
     "Three gull-cries. One broken wave. The same salt wind opens your eyes.",
-    "Before you look, you know where the first kindling will be."
+    "The haze thins around one practical certainty: before you look, you know where the first kindling will be."
   ];
 }
 

@@ -325,6 +325,12 @@ Follow-up:
 - Added a small `Raise a Windbreak` pass: wreckage wood can become a rough current-entry structure that softens both cold and heat without opening a broader shelter-building system yet.
 - Tuned windbreak after playtest: one wood felt too cheap and too weak, so each build now needs a 3-wood bundle and gives stronger heat/cold protection.
 - Tuned fire tending after playtest: partial tending progress now persists when switching away, while an existing fire's row keeps showing flame strength so clicking back does not visually pull the bar backward.
+- Moved testing speed controls out of fixed bottom-left overlay and into normal page flow below the prototype so growing UI panels cannot hide or be hidden by them.
+- Matched the outer page frame to the app's compact/expanded state so the speed controls align under the opening screen before the log entry appears.
+- Converted inert place hooks into a small site navigation shell: Camp, Wreckage, Tide-Line, and Jungle Line are real places, actions filter by current site, and route buttons include return paths instead of disabled promises.
+- Tuned respawn reveal flow: remembered max Bearings now speeds the next entry but does not keep log/body/sites/system readouts open; each wake must re-form perception through current-entry Bearings again.
+- Added an early haze beat to the first coherent log/wake copy, borrowing the survival-confusion setup without adding a separate tutorial popup yet.
+- Removed width tweening from action-row progress bars so fast action completion does not visibly rebound backward; vitals can still animate smoothly.
 
 ### Pass 5F: A Dark Room Opening Discipline
 

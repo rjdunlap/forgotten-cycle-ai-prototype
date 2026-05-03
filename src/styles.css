@@ -37,6 +37,9 @@
 
   body {
     @apply grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text;
+    align-items: start;
+    justify-items: center;
+    padding: 0.75rem;
   }
 
   [hidden] {
@@ -45,12 +48,30 @@
 }
 
 @layer components {
-  .app-shell {
+  .page-frame {
+    width: min(96vw, 760px);
+    justify-items: center;
+  }
+
+  .page-frame-compact {
+    width: min(96vw, 520px);
+  }
+
+  .page-frame-expanded {
     width: min(96vw, 760px);
   }
 
+  .app-shell {
+    width: 100%;
+  }
+
   .app-shell-compact {
-    width: min(96vw, 520px);
+    width: min(100%, 520px);
+  }
+
+  .testing-speed {
+    justify-self: start;
+    width: min(100%, 360px);
   }
 
   @media (min-width: 768px) {
@@ -61,6 +82,10 @@
 
   .meter-fill {
     transition: width 120ms linear;
+  }
+
+  .action-meter {
+    transition: none;
   }
 
   .action-card {

@@ -175,7 +175,7 @@ export function getBuildWindbreakTime(_state: GameState): number {
 }
 
 export function hasLightReadout(state: GameState): boolean {
-  return getShoreSenseLevel(state) >= 2 || state.maxShoreSenseLevel >= 2;
+  return getShoreSenseLevel(state) >= 2;
 }
 
 export function getTimeInDay(state: GameState): number {

@@ -6,6 +6,7 @@
     <title>Forgotten Cycle AI Prototype</title>
   </head>
   <body class="grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text">
+    <div id="pageFrame" class="page-frame page-frame-compact grid gap-2.5">
     <main id="app" class="app-shell app-shell-compact grid gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 transition-opacity duration-300 sm:p-4" aria-label="Forgotten Cycle">
       <section id="bodySection" class="grid gap-3 border border-ember-line bg-ember-panel p-3.5 md:col-span-2" aria-label="You" hidden>
         <div class="flex items-start justify-between gap-3">
@@ -84,7 +85,7 @@
             <span id="orientStatus" class="text-xs text-ember-accent-strong">Active</span>
           </span>
           <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
-            <span id="orientProgressBar" class="meter-fill block h-full bg-ember-accent-strong"></span>
+            <span id="orientProgressBar" class="meter-fill action-meter block h-full bg-ember-accent-strong"></span>
           </span>
         </button>
 
@@ -97,7 +98,7 @@
             <span id="scavengeStatus" class="text-xs text-ember-muted">Locked</span>
           </span>
           <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
-            <span id="scavengeProgressBar" class="meter-fill block h-full bg-ember-accent-strong"></span>
+            <span id="scavengeProgressBar" class="meter-fill action-meter block h-full bg-ember-accent-strong"></span>
           </span>
         </button>
 
@@ -110,7 +111,7 @@
             <span id="fireStatus" class="text-xs text-ember-muted">No Wood</span>
           </span>
           <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
-            <span id="fireProgressBar" class="meter-fill block h-full bg-ember-red"></span>
+            <span id="fireProgressBar" class="meter-fill action-meter block h-full bg-ember-red"></span>
           </span>
         </button>
 
@@ -123,19 +124,37 @@
             <span id="windbreakStatus" class="text-xs text-ember-muted">No Wood</span>
           </span>
           <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
-            <span id="windbreakProgressBar" class="meter-fill block h-full bg-ember-accent"></span>
+            <span id="windbreakProgressBar" class="meter-fill action-meter block h-full bg-ember-accent"></span>
           </span>
         </button>
 
         <div id="placesSection" class="grid gap-2 border-t border-ember-line pt-2" hidden>
           <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Places</p>
+          <button id="campSiteButton" class="action-card" type="button" hidden>
+            <span class="flex items-start justify-between gap-3">
+              <span>
+                <strong class="block text-sm">Return to Camp</strong>
+                <span class="block text-xs font-normal text-ember-muted">Go back to the fire, the shelter, and the place you woke.</span>
+              </span>
+              <span class="text-xs text-ember-muted">Go</span>
+            </span>
+          </button>
+          <button id="wreckSiteButton" class="action-card" type="button" hidden>
+            <span class="flex items-start justify-between gap-3">
+              <span>
+                <strong class="block text-sm">Go to the Wreckage</strong>
+                <span class="block text-xs font-normal text-ember-muted">Pick through the broken planks above the wash.</span>
+              </span>
+              <span class="text-xs text-ember-muted">Go</span>
+            </span>
+          </button>
           <button id="tidePlaceButton" class="action-card" type="button" disabled hidden>
             <span class="flex items-start justify-between gap-3">
               <span>
                 <strong class="block text-sm">Explore the Tide-Line</strong>
                 <span class="block text-xs font-normal text-ember-muted">Follow the high-water mark beyond the wreckage.</span>
               </span>
-              <span class="text-xs text-ember-muted">Not Yet</span>
+              <span class="text-xs text-ember-muted">Go</span>
             </span>
           </button>
           <button id="junglePlaceButton" class="action-card" type="button" disabled hidden>
@@ -144,7 +163,7 @@
                 <strong class="block text-sm">Watch the Jungle Line</strong>
                 <span class="block text-xs font-normal text-ember-muted">Study the trees before stepping under them.</span>
               </span>
-              <span class="text-xs text-ember-muted">Not Yet</span>
+              <span class="text-xs text-ember-muted">Go</span>
             </span>
           </button>
         </div>
@@ -159,7 +178,7 @@
       </section>
     </main>
 
-    <aside class="fixed bottom-3 left-3 grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
+    <aside class="testing-speed grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
       <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Speed</p>
       <div class="grid grid-cols-4 gap-1">
         <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="0" aria-pressed="false">Pause</button>
@@ -168,6 +187,7 @@
         <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="10" aria-pressed="false">10x</button>
       </div>
     </aside>
+    </div>
 
     <dialog id="deathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
       <form method="dialog" class="grid gap-4 p-5">
