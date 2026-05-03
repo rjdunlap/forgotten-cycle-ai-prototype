@@ -1,9 +1,25 @@
 export const MAX_WARMTH = 100;
-export const STARTING_WARMTH = 45;
+export const MAX_THIRST = 100;
+export const MAX_FOOD = 100;
+export const COMFORT_WARMTH = 50;
+export const STARTING_WARMTH = COMFORT_WARMTH;
+export const STARTING_THIRST = 100;
+export const STARTING_FOOD = 100;
 export const COLD_RATE = 7;
+export const HEAT_RATE = 0.55;
+export const THIRST_DECAY_RATE = 0.16;
+export const FOOD_DECAY_RATE = 0.035;
+export const HEAT_THIRST_RATE_BONUS = 0.08;
+export const COLD_FOOD_RATE_BONUS = 0.035;
 export const SUN_WARM_RATE = 5;
-export const DAYLIGHT_END = 18;
-export const SUNSET_END = 30;
+export const DAY_LENGTH = 288;
+export const DAWN_LENGTH = 24;
+export const SUNSET_LENGTH = 36;
+export const YEAR_LENGTH_DAYS = 360;
+export const START_DAY_OF_YEAR = 10;
+export const EQUINOX_DAY = 80;
+export const MIN_DAYLIGHT = 132;
+export const MAX_DAYLIGHT = 164;
 export const BASE_SCAVENGE_TIME = 2.4;
 export const BEARINGS_TIME = 3.5;
 export const BASE_WOOD_FOUND = 1;
@@ -25,10 +41,13 @@ export const NIGHT_SCAVENGE_EFFICIENCY = 0.35;
 
 export type Activity = "orienting" | "scavenging" | "tending";
 export type ExposurePhase = "sunlit" | "sunset" | "night";
+export type SeasonalEventWindow = "year-start" | "spring-equinox" | "summer-solstice" | "late-year";
 
 export interface GameState {
   cycle: number;
   innerWarmth: number;
+  thirst: number;
+  food: number;
   foundWood: number;
   searchProgress: number;
   fireProgress: number;
@@ -55,6 +74,8 @@ export function createGameState(): GameState {
   return {
     cycle: 1,
     innerWarmth: STARTING_WARMTH,
+    thirst: STARTING_THIRST,
+    food: STARTING_FOOD,
     foundWood: 0,
     searchProgress: 0,
     fireProgress: 0,
@@ -144,10 +165,52 @@ export function hasLightReadout(state: GameState): boolean {
   return getShoreSenseLevel(state) >= 1 || state.maxShoreSenseLevel >= 1;
 }
 
+export function getTimeInDay(state: GameState): number {
+  return state.timeAlive % DAY_LENGTH;
+}
+
 export function getExposurePhase(state: GameState): ExposurePhase {
-  if (state.timeAlive < DAYLIGHT_END) return "sunlit";
-  if (state.timeAlive < SUNSET_END) return "sunset";
+  const timeInDay = getTimeInDay(state);
+  if (timeInDay < getDaylightEnd(state)) return "sunlit";
+  if (timeInDay < getNightStart(state)) return "sunset";
   return "night";
+}
+
+export function getDayNumber(state: GameState): number {
+  return Math.floor(state.timeAlive / DAY_LENGTH) + 1;
+}
+
+export function getDayOfYear(state: GameState): number {
+  return ((START_DAY_OF_YEAR + getDayNumber(state) - 2) % YEAR_LENGTH_DAYS) + 1;
+}
+
+export function getSeasonalDaylight(state: GameState): number {
+  const dayOfYear = getDayOfYear(state);
+  const seasonalWave = Math.sin(((dayOfYear - EQUINOX_DAY) / YEAR_LENGTH_DAYS) * Math.PI * 2);
+  const midpoint = (MIN_DAYLIGHT + MAX_DAYLIGHT) / 2;
+  const amplitude = (MAX_DAYLIGHT - MIN_DAYLIGHT) / 2;
+
+  return midpoint + amplitude * seasonalWave;
+}
+
+export function getDaylightEnd(state: GameState): number {
+  return getSeasonalDaylight(state);
+}
+
+export function getDawnEnd(state: GameState): number {
+  return Math.min(DAWN_LENGTH, getDaylightEnd(state));
+}
+
+export function getNightStart(state: GameState): number {
+  return Math.min(DAY_LENGTH, getDaylightEnd(state) + SUNSET_LENGTH);
+}
+
+export function getSeasonalEventWindow(state: GameState): SeasonalEventWindow {
+  const dayOfYear = getDayOfYear(state);
+  if (dayOfYear <= 20 || dayOfYear >= 350) return "year-start";
+  if (dayOfYear >= 72 && dayOfYear <= 88) return "spring-equinox";
+  if (dayOfYear >= 162 && dayOfYear <= 178) return "summer-solstice";
+  return "late-year";
 }
 
 export function getColdRate(state: GameState): number {
@@ -166,11 +229,23 @@ export function getColdRate(state: GameState): number {
 }
 
 export function getSunWarmRate(state: GameState): number {
-  return getExposurePhase(state) === "sunlit" ? SUN_WARM_RATE : 0;
+  return getExposurePhase(state) === "sunlit" && getTimeInDay(state) < getDawnEnd(state) ? SUN_WARM_RATE : 0;
 }
 
 export function getFireWarmRate(state: GameState): number {
-  return state.fireStrength > 0 ? FIRE_WARM_RATE : 0;
+  return state.fireStrength > 0 && getExposurePhase(state) !== "sunlit" ? FIRE_WARM_RATE : 0;
+}
+
+export function getJungleThreat(state: GameState): number {
+  const phase = getExposurePhase(state);
+  if (phase === "sunlit") return 5;
+  if (phase === "sunset") return 30;
+
+  return Math.min(100, Math.max(35, 35 + (MAX_WARMTH - state.fireStrength) * 0.65));
+}
+
+export function getHeatRate(state: GameState): number {
+  return getExposurePhase(state) === "sunlit" && getTimeInDay(state) >= getDawnEnd(state) ? HEAT_RATE : 0;
 }
 
 export function getScavengeLightEfficiency(state: GameState): number {
@@ -195,11 +270,18 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   let firekeepingXp = state.firekeepingXp;
   let maxFirekeepingLevel = state.maxFirekeepingLevel;
   let fuelSourceKnown = state.fuelSourceKnown;
-  let innerWarmth = state.innerWarmth - getColdRate(state) * seconds;
-  innerWarmth = Math.min(MAX_WARMTH, innerWarmth + getSunWarmRate(state) * seconds);
-  if (state.fireStrength > 0) {
-    innerWarmth = Math.min(MAX_WARMTH, innerWarmth + getFireWarmRate(state) * seconds);
+  const coldRate = getColdRate(state);
+  const heatRate = getHeatRate(state);
+  let innerWarmth = state.innerWarmth + (heatRate - coldRate) * seconds;
+  const thirst = Math.max(0, state.thirst - (THIRST_DECAY_RATE + heatRate * HEAT_THIRST_RATE_BONUS) * seconds);
+  const food = Math.max(0, state.food - (FOOD_DECAY_RATE + coldRate * COLD_FOOD_RATE_BONUS) * seconds);
+  if (innerWarmth < COMFORT_WARMTH) {
+    innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getSunWarmRate(state) * seconds);
   }
+  if (state.fireStrength > 0 && innerWarmth < COMFORT_WARMTH) {
+    innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getFireWarmRate(state) * seconds);
+  }
+  innerWarmth = Math.min(MAX_WARMTH, Math.max(0, innerWarmth));
   const scavengeTime = getScavengeTime(state);
   const bearingsTime = getBearingsTime(state);
 
@@ -239,7 +321,9 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
 
   return {
     ...state,
-    innerWarmth: Math.max(0, innerWarmth),
+    innerWarmth,
+    thirst,
+    food,
     foundWood,
     searchProgress,
     fireProgress,
@@ -254,7 +338,7 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
     coastalKnowledge: state.coastalKnowledge + seconds,
     timeAlive: state.timeAlive + seconds,
     fuelSourceKnown,
-    alive: innerWarmth > 0
+    alive: innerWarmth > 0 && innerWarmth < MAX_WARMTH && thirst > 0 && food > 0
   };
 }
 
@@ -269,6 +353,8 @@ export function resetCycle(state: GameState): GameState {
     ...state,
     cycle: state.cycle + 1,
     innerWarmth: STARTING_WARMTH,
+    thirst: STARTING_THIRST,
+    food: STARTING_FOOD,
     foundWood: 0,
     searchProgress: 0,
     fireProgress: 0,

@@ -1,17 +1,21 @@
 import {
+  MAX_FOOD,
+  MAX_THIRST,
   MAX_WARMTH,
+  COMFORT_WARMTH,
   type Activity,
   canReset,
   createGameState,
   getBearingsTime,
   getColdRate,
+  getDayNumber,
+  getDawnEnd,
   getExposurePhase,
   getFirekeepingLevel,
   getFirekeepingMasteryBonus,
   getFireWarmRate,
-  getNextFirekeepingXp,
-  getNextScavengeXp,
-  getNextShoreSenseXp,
+  getHeatRate,
+  getJungleThreat,
   getScavengeLevel,
   getScavengeLightEfficiency,
   getScavengeMasteryBonus,
@@ -20,6 +24,7 @@ import {
   getShoreSenseLevel,
   getSunWarmRate,
   getTendFireTime,
+  getTimeInDay,
   getWoodFound,
   hasLightReadout,
   resetCycle,
@@ -30,13 +35,24 @@ import {
 import "./styles.css";
 
 const els = {
+  bodySection: requiredElement<HTMLElement>("#bodySection"),
   cycle: requiredElement<HTMLElement>("#cycle"),
   lightRow: requiredElement<HTMLElement>("#lightRow"),
   lightText: requiredElement<HTMLElement>("#lightText"),
   activitySummary: requiredElement<HTMLElement>("#activitySummary"),
   warmthBar: requiredElement<HTMLElement>("#warmthBar"),
   warmthText: requiredElement<HTMLElement>("#warmthText"),
+  thirstBar: requiredElement<HTMLElement>("#thirstBar"),
+  thirstBarRow: requiredElement<HTMLElement>("#thirstBarRow"),
+  thirstRow: requiredElement<HTMLElement>("#thirstRow"),
+  thirstText: requiredElement<HTMLElement>("#thirstText"),
+  foodBar: requiredElement<HTMLElement>("#foodBar"),
+  foodBarRow: requiredElement<HTMLElement>("#foodBarRow"),
+  foodRow: requiredElement<HTMLElement>("#foodRow"),
+  foodText: requiredElement<HTMLElement>("#foodText"),
   conditionDetail: requiredElement<HTMLElement>("#conditionDetail"),
+  suppliesSection: requiredElement<HTMLElement>("#suppliesSection"),
+  fireSupplyRow: requiredElement<HTMLElement>("#fireSupplyRow"),
   woodText: requiredElement<HTMLElement>("#woodText"),
   fireText: requiredElement<HTMLElement>("#fireText"),
   orientButton: requiredElement<HTMLButtonElement>("#orientButton"),
@@ -51,10 +67,16 @@ const els = {
   fireDetail: requiredElement<HTMLElement>("#fireDetail"),
   fireStatus: requiredElement<HTMLElement>("#fireStatus"),
   fireProgressBar: requiredElement<HTMLElement>("#fireProgressBar"),
+  placesSection: requiredElement<HTMLElement>("#placesSection"),
+  tidePlaceButton: requiredElement<HTMLButtonElement>("#tidePlaceButton"),
+  junglePlaceButton: requiredElement<HTMLButtonElement>("#junglePlaceButton"),
   speedButtons: [...document.querySelectorAll<HTMLButtonElement>(".speedButton")],
+  logSection: requiredElement<HTMLElement>("#logSection"),
   log: requiredElement<HTMLOListElement>("#log"),
   app: requiredElement<HTMLElement>("#app"),
   deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
+  deathTitle: requiredElement<HTMLElement>("#deathTitle"),
+  deathIntro: requiredElement<HTMLElement>("#deathIntro"),
   deathStats: requiredElement<HTMLElement>("#deathStats"),
   deathLesson: requiredElement<HTMLElement>("#deathLesson"),
   wakeButton: requiredElement<HTMLButtonElement>("#wakeButton")
@@ -66,6 +88,7 @@ let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
 let fuelDiscoveryLogged = false;
+let jungleNoiseStage = 0;
 let lastExposurePhase = getExposurePhase(state);
 
 function requiredElement<T extends Element>(selector: string): T {
@@ -90,66 +113,91 @@ function addLogs(messages: readonly string[]): void {
 }
 
 function render(): void {
-  const percent = (state.innerWarmth / MAX_WARMTH) * 100;
+  const bodyTemperature = state.innerWarmth;
+  const bodyTemperaturePercent = (bodyTemperature / MAX_WARMTH) * 100;
+  const thirstPercent = (state.thirst / MAX_THIRST) * 100;
+  const foodPercent = (state.food / MAX_FOOD) * 100;
   const firePercent = (state.fireStrength / MAX_WARMTH) * 100;
   const bearingsTime = getBearingsTime(state);
   const scavengeTime = getScavengeTime(state);
   const tendFireTime = getTendFireTime(state);
   const woodFound = getWoodFound(state);
   const coldRate = getColdRate(state);
+  const heatRate = getHeatRate(state);
   const sunWarmRate = getSunWarmRate(state);
   const fireWarmRate = getFireWarmRate(state);
   const shoreSenseLevel = getShoreSenseLevel(state);
-  const nextShoreSenseXp = getNextShoreSenseXp(state);
   const shoreSenseMasteryBonus = getShoreSenseMasteryBonus(state);
   const scavengeLevel = getScavengeLevel(state);
-  const nextScavengeXp = getNextScavengeXp(state);
   const scavengeMasteryBonus = getScavengeMasteryBonus(state);
   const scavengeLightEfficiency = getScavengeLightEfficiency(state);
   const firekeepingLevel = getFirekeepingLevel(state);
-  const nextFirekeepingXp = getNextFirekeepingXp(state);
   const firekeepingMasteryBonus = getFirekeepingMasteryBonus(state);
   const orientPercent = Math.min(100, (state.bearingsProgress / bearingsTime) * 100);
   const scavengePercent = state.fuelSourceKnown ? Math.min(100, (state.searchProgress / scavengeTime) * 100) : 0;
   const tendPercent = state.foundWood >= 1 ? Math.min(100, (state.fireProgress / tendFireTime) * 100) : 0;
+  const bodyKnown = hasBodyReadout();
+  const needsKnown = hasNeedsReadout();
+  const fireKnown = hasFireReadout();
+  const tidePlaceKnown = hasTidePlaceReadout();
+  const junglePlaceKnown = hasJunglePlaceReadout();
 
   els.cycle.textContent = `Entry ${toRoman(state.cycle)}`;
+  els.bodySection.hidden = !bodyKnown;
+  els.logSection.hidden = !bodyKnown;
+  els.app.classList.toggle("app-shell-compact", !bodyKnown);
+  els.app.classList.toggle("app-shell-expanded", bodyKnown);
   els.lightRow.hidden = !hasLightReadout(state);
+  els.thirstRow.hidden = !needsKnown;
+  els.thirstBarRow.hidden = !needsKnown;
+  els.foodRow.hidden = !needsKnown;
+  els.foodBarRow.hidden = !needsKnown;
+  els.suppliesSection.hidden = !hasFuelReadout();
+  els.fireSupplyRow.hidden = !fireKnown;
+  els.placesSection.hidden = !tidePlaceKnown && !junglePlaceKnown;
+  els.tidePlaceButton.hidden = !tidePlaceKnown;
+  els.junglePlaceButton.hidden = !junglePlaceKnown;
   els.lightText.textContent = getLightLabel();
   els.activitySummary.textContent = getActivitySummary();
-  els.warmthBar.style.width = `${percent}%`;
-  els.warmthText.textContent = state.alive ? `${Math.ceil(state.innerWarmth)} / ${MAX_WARMTH}` : "cold";
-  els.conditionDetail.textContent = getConditionDetail(coldRate, sunWarmRate, fireWarmRate);
+  els.warmthBar.style.width = `${bodyTemperaturePercent}%`;
+  els.warmthBar.style.backgroundColor = getBodyTemperatureColor(bodyTemperature);
+  els.warmthText.textContent = state.alive ? getBodyTemperatureLabel(bodyTemperature) : "spent";
+  els.thirstBar.style.width = `${thirstPercent}%`;
+  els.thirstText.textContent = state.thirst > 0 ? `${Math.ceil(state.thirst)} / ${MAX_THIRST}` : "empty";
+  els.foodBar.style.width = `${foodPercent}%`;
+  els.foodText.textContent = state.food > 0 ? `${Math.ceil(state.food)} / ${MAX_FOOD}` : "empty";
+  els.conditionDetail.textContent = getConditionDetail(coldRate, heatRate, sunWarmRate, fireWarmRate);
   els.woodText.textContent = formatWood(state.foundWood);
   els.fireText.textContent = `${Math.ceil(state.fireStrength)} / ${MAX_WARMTH}`;
 
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
   els.orientDetail.textContent = state.fuelSourceKnown
-    ? `Shore Sense Lv ${shoreSenseLevel} (${state.shoreSenseXp}/${nextShoreSenseXp}) - next insight in ${Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1)}s. Mastery +${Math.round(shoreSenseMasteryBonus * 100)}%.`
+    ? `Shore Sense Lv ${shoreSenseLevel} (${formatLevelProgress(state.shoreSenseXp)}) - next insight in ${Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1)}s. Mastery +${Math.round(shoreSenseMasteryBonus * 100)}%.`
     : `Notice tide-line signs in ${Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1)}s.`;
   els.orientStatus.textContent = getActionStatus("orienting");
   els.orientProgressBar.style.width = `${orientPercent}%`;
 
-  els.scavengeButton.hidden = !state.fuelSourceKnown;
+  els.scavengeButton.hidden = !hasFuelReadout();
   els.scavengeButton.disabled = !state.alive || !state.fuelSourceKnown;
   els.scavengeButton.setAttribute("aria-pressed", String(activity === "scavenging"));
   els.scavengeDetail.textContent = state.fuelSourceKnown
-    ? `Scavenge Lv ${scavengeLevel} (${state.scavengeXp}/${nextScavengeXp}) - collect +${formatWood(woodFound)} wood about every ${scavengeTime.toFixed(1)}s.${getScavengeLightNote(scavengeLightEfficiency)} Mastery +${Math.round(scavengeMasteryBonus * 100)}%.`
+    ? `Scavenge Lv ${scavengeLevel} (${formatLevelProgress(state.scavengeXp)}) - collect +${formatWood(woodFound)} wood from wreckage about every ${scavengeTime.toFixed(1)}s.${getScavengeLightNote(scavengeLightEfficiency)} Mastery +${Math.round(scavengeMasteryBonus * 100)}%.`
     : "Find wood signs before scavenging.";
   els.scavengeStatus.textContent = getActionStatus("scavenging");
   els.scavengeProgressBar.style.width = `${scavengePercent}%`;
 
-  els.fireButton.hidden = !state.fuelSourceKnown;
+  els.fireButton.hidden = !fireKnown;
   els.fireButton.disabled = !state.alive || !state.fuelSourceKnown || state.foundWood < 1;
   els.fireButton.setAttribute("aria-pressed", String(activity === "tending"));
   els.fireDetail.textContent =
     state.foundWood >= 1
-      ? `Firekeeping Lv ${firekeepingLevel} (${state.firekeepingXp}/${nextFirekeepingXp}) - spend 1 wood in ${tendFireTime.toFixed(1)}s. Mastery +${Math.round(firekeepingMasteryBonus * 100)}%.`
+      ? `Firekeeping Lv ${firekeepingLevel} (${formatLevelProgress(state.firekeepingXp)}) - spend 1 wood in ${tendFireTime.toFixed(1)}s. Mastery +${Math.round(firekeepingMasteryBonus * 100)}%.`
       : "Collect wood before the fire can help.";
   els.fireStatus.textContent = getActionStatus("tending");
   els.fireProgressBar.style.width = `${activity === "tending" ? tendPercent : firePercent}%`;
 
+  els.app.hidden = !state.alive;
   els.app.classList.toggle("opacity-20", !state.alive);
 
   for (const button of els.speedButtons) {
@@ -167,30 +215,40 @@ function tick(now: number): void {
   if (!canReset(state)) {
     const previousWood = state.foundWood;
     const previousFire = state.fireStrength;
+    const previousShoreSenseXp = state.shoreSenseXp;
     const previousShoreSenseLevel = getShoreSenseLevel(state);
     const previousScavengeLevel = getScavengeLevel(state);
     const previousFirekeepingLevel = getFirekeepingLevel(state);
     const knewFuelSource = state.fuelSourceKnown;
     const previousExposurePhase = lastExposurePhase;
+    const previousJungleThreat = getJungleThreat(state);
     state = runTick(state, elapsed, activity);
     lastExposurePhase = getExposurePhase(state);
 
     if (!knewFuelSource && state.fuelSourceKnown && !fuelDiscoveryLogged) {
       fuelDiscoveryLogged = true;
       activity = "orienting";
-      addLog("The light resolves into low sun. Above the wrack line, pale splinters and dry needles mark kindling for a first fire.");
     }
 
     if (lastExposurePhase !== previousExposurePhase) {
-      addLog(getExposureShiftMessage(lastExposurePhase));
+      addLog(getExposureShiftMessage(state));
+      if (lastExposurePhase === "sunlit") {
+        jungleNoiseStage = 0;
+      }
+      if (lastExposurePhase === "sunset") {
+        jungleNoiseStage = 1;
+      }
     }
 
-    if (knewFuelSource && getShoreSenseLevel(state) > previousShoreSenseLevel) {
-      addLog(`You read the wind and wrack more cleanly. Shore Sense reaches Lv ${getShoreSenseLevel(state)} this entry.`);
+    if (state.shoreSenseXp > previousShoreSenseXp) {
+      addLog(getShoreSenseCompletionMessage(previousShoreSenseLevel, getShoreSenseLevel(state), state.shoreSenseXp));
     }
 
     if (state.foundWood > previousWood) {
       addLog(findWoodMessage(state));
+      if (previousWood < 1 && state.foundWood >= 1) {
+        addLog("The wood in your hands changes the problem. Now there can be fire.");
+      }
     }
 
     if (getScavengeLevel(state) > previousScavengeLevel) {
@@ -200,6 +258,8 @@ function tick(now: number): void {
     if (state.fireStrength > previousFire + 1) {
       addLog("The fire catches higher. Heat pushes back against the shore.");
     }
+
+    addJungleNoiseLogs(previousJungleThreat, getJungleThreat(state));
 
     if (getFirekeepingLevel(state) > previousFirekeepingLevel) {
       addLog(`You learn how the coals breathe. Firekeeping reaches Lv ${getFirekeepingLevel(state)} this entry.`);
@@ -231,7 +291,7 @@ els.scavengeButton.addEventListener("click", () => {
   if (!state.fuelSourceKnown) return;
 
   activity = "scavenging";
-  addLog("You search the tide-line for wood the fire might accept.");
+  addLog("You pick through the wreckage for wood the fire might accept.");
   render();
 });
 
@@ -246,7 +306,8 @@ els.fireButton.addEventListener("click", () => {
 
 for (const button of els.speedButtons) {
   button.addEventListener("click", () => {
-    speedMultiplier = Number(button.dataset.speed) || 1;
+    const nextSpeed = Number(button.dataset.speed);
+    speedMultiplier = Number.isFinite(nextSpeed) ? nextSpeed : 1;
     render();
   });
 }
@@ -260,6 +321,7 @@ els.wakeButton.addEventListener("click", () => {
   state = resetCycle(state);
   activity = "orienting";
   fuelDiscoveryLogged = state.fuelSourceKnown;
+  jungleNoiseStage = 0;
   lastExposurePhase = getExposurePhase(state);
   deathShown = false;
   els.deathDialog.close();
@@ -268,9 +330,93 @@ els.wakeButton.addEventListener("click", () => {
 });
 
 function getActivitySummary(): string {
+  if (speedMultiplier === 0) return "Paused";
   if (activity === "orienting") return "Current: reading the shore";
   if (activity === "scavenging") return "Current: collecting wood";
   return "Current: tending the fire";
+}
+
+function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
+  if (previousLevel < 1 && currentLevel >= 1) {
+    return "Salt. Light. Surf. You make the first clean mark in your head.";
+  }
+
+  if (completions === 2) {
+    return "Three gull-cries. One broken wave. Something wooden knocks beyond the foam.";
+  }
+
+  if (previousLevel < 2 && currentLevel >= 2) {
+    return "Above the wrack line, driftwood ribs and snapped planks wait under dry needles.";
+  }
+
+  if (previousLevel < 3 && currentLevel >= 3) {
+    return "Past the wreckage, the tide-line keeps going. Your dry mouth notices before your courage does.";
+  }
+
+  if (previousLevel < 4 && currentLevel >= 4) {
+    return "The jungle edge stops being a wall. It becomes a place you might study before entering.";
+  }
+
+  if (currentLevel > previousLevel) {
+    return `You read the wind and wrack more cleanly. Shore Sense reaches Lv ${currentLevel} this entry.`;
+  }
+
+  const messages: readonly string[] = [
+    "You line up sun, surf, and wind until the shore quits spinning.",
+    "A high-water mark bends away into haze, farther than panic first allowed.",
+    "The tree line moves with small sounds, then settles when you stare.",
+    "The surf keeps time. Your breath learns to follow it."
+  ];
+
+  const messageIndex = Math.max(0, (completions - 3) % messages.length);
+  return messages[messageIndex] ?? "You keep reading the shore. One more small pattern holds still long enough to name.";
+}
+
+function getBodyTemperatureLabel(bodyTemperature: number): string {
+  const offset = Math.round(bodyTemperature - COMFORT_WARMTH);
+  if (bodyTemperature <= 0) return "cold end";
+  if (bodyTemperature >= MAX_WARMTH) return "heat end";
+  if (bodyTemperature < 30) return `${offset} cold`;
+  if (bodyTemperature > 70) return `+${offset} hot`;
+  if (offset === 0) return "0 steady";
+  return `${offset > 0 ? "+" : ""}${offset} steady`;
+}
+
+function getBodyTemperatureColor(bodyTemperature: number): string {
+  if (bodyTemperature < 30) return "#4f8fd6";
+  if (bodyTemperature > 70) return "#b54b3f";
+  return "#d6a84f";
+}
+
+function formatLevelProgress(xp: number): string {
+  const level = Math.floor(Math.sqrt(xp));
+  const levelStart = level ** 2;
+  const nextLevelStart = (level + 1) ** 2;
+  return `${xp - levelStart}/${nextLevelStart - levelStart}`;
+}
+
+function hasBodyReadout(): boolean {
+  return getShoreSenseLevel(state) >= 1 || state.maxShoreSenseLevel >= 1;
+}
+
+function hasNeedsReadout(): boolean {
+  return getShoreSenseLevel(state) >= 3 || state.maxShoreSenseLevel >= 3;
+}
+
+function hasFuelReadout(): boolean {
+  return getShoreSenseLevel(state) >= 2 || state.maxShoreSenseLevel >= 2;
+}
+
+function hasFireReadout(): boolean {
+  return hasFuelReadout() && (state.foundWood >= 1 || state.fireStrength > 0 || getFirekeepingLevel(state) > 0 || state.maxFirekeepingLevel > 0);
+}
+
+function hasTidePlaceReadout(): boolean {
+  return getShoreSenseLevel(state) >= 3 || state.maxShoreSenseLevel >= 3;
+}
+
+function hasJunglePlaceReadout(): boolean {
+  return getShoreSenseLevel(state) >= 4 || state.maxShoreSenseLevel >= 4;
 }
 
 function getActionStatus(action: Activity): string {
@@ -292,25 +438,38 @@ function getActionStatus(action: Activity): string {
 
 function getLightLabel(): string {
   const phase = getExposurePhase(state);
-  if (phase === "sunlit") return "low sun";
-  if (phase === "sunset") return "fading";
-  return "gone";
+  const day = getDayNumber(state);
+  const dayPrefix = day > 1 ? `day ${day}, ` : "";
+  if (phase === "sunlit" && getTimeInDay(state) < getDawnEnd(state)) return `${dayPrefix}dawn`;
+  if (phase === "sunlit") return `${dayPrefix}daylight`;
+  if (phase === "sunset") return `${dayPrefix}fading`;
+  return `${dayPrefix}gone`;
 }
 
-function getConditionDetail(coldRate: number, sunWarmRate: number, fireWarmRate: number): string {
+function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: number, fireWarmRate: number): string {
   const phase = getExposurePhase(state);
   if (phase === "sunlit") {
     if (!hasLightReadout(state)) {
-      return `Something warm still holds the cold back.`;
+      return `Something in the air is holding the worst of the shore back.`;
     }
-    return `The sun warms +${sunWarmRate.toFixed(1)}/s. Shadows are still short.`;
+    if (getTimeInDay(state) < getDawnEnd(state)) {
+      return `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s.`;
+    }
+    if (getDayNumber(state) > 1) {
+      return `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
+    }
+    return `The day pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
   }
 
   if (phase === "sunset") {
-    return `The light is leaving. Cold drains ${coldRate.toFixed(1)}/s.`;
+    return `The light is leaving. Cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
   }
 
-  return `Fire warms +${fireWarmRate.toFixed(1)}/s. Cold drains ${coldRate.toFixed(1)}/s.`;
+  if (getJungleThreat(state) >= 75) {
+    return `The fire is losing its luster. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; cold and the jungle press in.`;
+  }
+
+  return `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Cold pulls body temp -${coldRate.toFixed(1)}/s.`;
 }
 
 function getScavengeLightNote(efficiency: number): string {
@@ -319,42 +478,99 @@ function getScavengeLightNote(efficiency: number): string {
   return ` Low light ${Math.round(efficiency * 100)}%.`;
 }
 
-function getExposureShiftMessage(phase: ReturnType<typeof getExposurePhase>): string {
+function getExposureShiftMessage(currentState: GameState): string {
+  const phase = getExposurePhase(currentState);
   if (phase === "sunset") {
-    return "The sun slips behind the black trees. The shore stops feeling harmless.";
+    return "The sun slips behind the black trees. The jungle begins ticking and calling to itself.";
   }
 
   if (phase === "night") {
-    return "Night settles in. Warmth now belongs to the fire, or it leaves you.";
+    return "Night settles in. Beyond the firelight, leaves drag against leaves.";
   }
 
-  return "The sun finds your skin again.";
+  return `The sun finds your skin again. Day ${getDayNumber(currentState)} begins on the same shore.`;
 }
 
 function findWoodMessage(currentState: GameState): string {
   const messages: readonly [string, string, string, string] = [
-    "You find soggy driftwood. It might burn if the coals are patient.",
-    "Dry pine needles hide under a stone lip.",
-    "A cedar log waits just above the tide mark.",
-    "You strip brittle bark from a fallen branch."
+    "You find a tar-dark plank, too worked to be a branch.",
+    "Dry pine needles hide beneath a rib of broken hull.",
+    "A cedar spar waits just above the tide mark.",
+    "You strip brittle bark and rope fiber from a fallen beam."
   ];
 
   const messageIndex = Math.max(0, Math.floor(currentState.foundWood - 1)) % messages.length;
   return messages[messageIndex] ?? messages[0];
 }
 
+function addJungleNoiseLogs(previousThreat: number, currentThreat: number): void {
+  if (getExposurePhase(state) !== "night") return;
+
+  if (currentThreat >= 75 && jungleNoiseStage < 2) {
+    jungleNoiseStage = 2;
+    addLog("The fire loses its luster. Something heavy tests the jungle line.");
+    return;
+  }
+
+  if (currentThreat >= 50 && previousThreat < 50 && jungleNoiseStage < 1) {
+    jungleNoiseStage = 1;
+    addLog("The night insects cut out all at once. Something is listening from the trees.");
+    return;
+  }
+
+  if (previousThreat >= 75 && currentThreat < 65 && state.fireStrength > 0) {
+    jungleNoiseStage = 1;
+    addLog("The flame lifts. The heavy movement withdraws into smaller sounds.");
+  }
+}
+
 function showDeathDialog(): void {
   deathShown = true;
-  els.deathStats.textContent = `You lasted ${formatDuration(state.timeAlive)} and found ${formatWood(state.foundWood)} wood.`;
+  els.deathTitle.textContent = getDeathTitle(state);
+  els.deathIntro.textContent = getDeathIntro(state);
+  els.deathStats.textContent = `You lasted ${formatDuration(state.timeAlive)}, found ${formatWood(state.foundWood)} wood, and ended with ${Math.ceil(state.thirst)} thirst / ${Math.ceil(state.food)} food.`;
   els.deathLesson.textContent = getDeathLesson(state.cycle);
   els.deathDialog.showModal();
 }
 
+function getDeathTitle(currentState: GameState): string {
+  if (currentState.thirst <= 0) return "Thirst takes you.";
+  if (currentState.food <= 0) return "Hunger hollows you out.";
+  if (currentState.innerWarmth >= MAX_WARMTH) return "Heat takes you.";
+  if (currentState.innerWarmth <= 0) return "Cold takes you.";
+  if (getJungleThreat(currentState) >= 75) return "The jungle reaches the shore.";
+  return "The body gives out.";
+}
+
+function getDeathIntro(currentState: GameState): string {
+  if (currentState.thirst <= 0) {
+    return "Your tongue sticks. The surf keeps speaking, useless and bright.";
+  }
+
+  if (currentState.food <= 0) {
+    return "Your hands shake around nothing. The jungle waits out the weakness.";
+  }
+
+  if (currentState.innerWarmth >= MAX_WARMTH) {
+    return "The sun becomes a weight. Salt dries on your skin and the shade stays too far away.";
+  }
+
+  if (currentState.innerWarmth <= 0) {
+    return "The firelight thins. Cold closes over your fingers first, then the rest.";
+  }
+
+  if (getJungleThreat(currentState) >= 75) {
+    return "The fire gutters. Leaves split. Something vast moves faster than thought.";
+  }
+
+  return "Cold, thirst, hunger, salt. Then silence.";
+}
+
 function getDeathLesson(cycle: number): string {
   const lessons: readonly [string, string, string] = [
-    "The cold snaps shut. Then, impossibly, your fingers remember where dry wood waits.",
+    "The snap is not only cold. Your fingers remember where dry wood waits, and your mouth remembers the cost of salt.",
     "Your chest still expects the last breath. Your hands remember bark from rot, cedar from soaked driftwood.",
-    "The shore is less silent now. Useful wood stands out before the thought is finished."
+    "The shore is less silent now. Useful wood stands out before hunger or the jungle can steal your focus."
   ];
 
   return lessons[Math.min(cycle - 1, lessons.length - 1)] ?? lessons[0];

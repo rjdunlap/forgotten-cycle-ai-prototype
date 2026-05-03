@@ -6,8 +6,8 @@
     <title>Forgotten Cycle AI Prototype</title>
   </head>
   <body class="grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text">
-    <main id="app" class="grid w-[min(96vw,760px)] gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 transition-opacity duration-300 sm:p-4 md:grid-cols-[1fr_230px]" aria-label="Forgotten Cycle">
-      <section class="grid gap-3 border border-ember-line bg-ember-panel p-3.5 md:col-span-2" aria-label="You">
+    <main id="app" class="app-shell app-shell-compact grid gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 transition-opacity duration-300 sm:p-4" aria-label="Forgotten Cycle">
+      <section id="bodySection" class="grid gap-3 border border-ember-line bg-ember-panel p-3.5 md:col-span-2" aria-label="You" hidden>
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">You</p>
@@ -19,34 +19,44 @@
           </div>
         </div>
 
-        <div class="grid gap-1.5 md:grid-cols-[minmax(180px,1fr)_230px] md:items-start md:gap-4">
-          <div class="grid gap-1.5">
-            <div class="flex items-center justify-between gap-3 text-sm">
-              <span>Warmth</span>
-              <span id="warmthText" class="text-ember-muted">45 / 100</span>
-            </div>
-            <div class="h-[18px] overflow-hidden border border-ember-line bg-[#101510]" aria-label="Inner Warmth">
-              <div id="warmthBar" class="meter-fill h-full bg-gradient-to-r from-ember-red to-ember-accent-strong"></div>
+        <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px] md:items-start md:gap-4">
+          <div class="grid gap-2">
+            <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Vitals</p>
+            <div class="grid gap-1.5 text-sm">
+              <div id="exposureRow" class="flex items-center justify-between gap-3">
+                <span>Body Temp</span>
+                <span id="warmthText" class="text-xs uppercase text-ember-muted">low</span>
+              </div>
+              <div id="exposureBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Body Temperature">
+                <div id="warmthBar" class="meter-fill h-full"></div>
+              </div>
+              <div id="thirstRow" class="flex items-center justify-between gap-3 pt-1" hidden>
+                <span>Thirst</span>
+                <span id="thirstText" class="text-xs uppercase text-ember-muted">100 / 100</span>
+              </div>
+              <div id="thirstBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Thirst" hidden>
+                <div id="thirstBar" class="meter-fill h-full bg-ember-accent-strong"></div>
+              </div>
+              <div id="foodRow" class="flex items-center justify-between gap-3 pt-1" hidden>
+                <span>Food</span>
+                <span id="foodText" class="text-xs uppercase text-ember-muted">100 / 100</span>
+              </div>
+              <div id="foodBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Food" hidden>
+                <div id="foodBar" class="meter-fill h-full bg-ember-accent"></div>
+              </div>
             </div>
             <p id="conditionDetail" class="text-xs text-ember-muted">Something warm still holds the cold back.</p>
           </div>
 
-          <div class="grid gap-2 border-t border-ember-line pt-3 text-sm text-ember-muted md:border-l md:border-t-0 md:pl-3 md:pt-0">
-            <div class="flex items-center justify-between gap-3">
+          <div id="suppliesSection" class="grid gap-2 border-t border-ember-line pt-3 text-sm text-ember-muted md:border-l md:border-t-0 md:pl-3 md:pt-0" hidden>
+            <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Supplies</p>
+            <div id="woodSupplyRow" class="flex items-center justify-between gap-3">
               <span>Wood</span>
               <span id="woodText" class="text-xs uppercase">0</span>
             </div>
-            <div class="flex items-center justify-between gap-3">
+            <div id="fireSupplyRow" class="flex items-center justify-between gap-3" hidden>
               <span>Fire</span>
               <span id="fireText" class="text-xs uppercase">0 / 100</span>
-            </div>
-            <div class="flex items-center justify-between gap-3">
-              <span>Thirst</span>
-              <span class="text-xs uppercase">dormant</span>
-            </div>
-            <div class="flex items-center justify-between gap-3">
-              <span>Food</span>
-              <span class="text-xs uppercase">dormant</span>
             </div>
           </div>
         </div>
@@ -77,8 +87,8 @@
         <button id="scavengeButton" class="action-card" type="button" disabled hidden>
           <span class="flex items-start justify-between gap-3">
             <span>
-              <strong class="block text-sm">Scavenge the Tide-Line</strong>
-              <span id="scavengeDetail" class="block text-xs font-normal text-ember-muted">Collect driftwood above the high-water mark.</span>
+              <strong class="block text-sm">Scavenge the Wreckage</strong>
+              <span id="scavengeDetail" class="block text-xs font-normal text-ember-muted">Collect worked wood from the broken line above the surf.</span>
             </span>
             <span id="scavengeStatus" class="text-xs text-ember-muted">Locked</span>
           </span>
@@ -99,22 +109,43 @@
             <span id="fireProgressBar" class="meter-fill block h-full bg-ember-red"></span>
           </span>
         </button>
+
+        <div id="placesSection" class="grid gap-2 border-t border-ember-line pt-2" hidden>
+          <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Places</p>
+          <button id="tidePlaceButton" class="action-card" type="button" disabled hidden>
+            <span class="flex items-start justify-between gap-3">
+              <span>
+                <strong class="block text-sm">Explore the Tide-Line</strong>
+                <span class="block text-xs font-normal text-ember-muted">Follow the high-water mark beyond the wreckage.</span>
+              </span>
+              <span class="text-xs text-ember-muted">Not Yet</span>
+            </span>
+          </button>
+          <button id="junglePlaceButton" class="action-card" type="button" disabled hidden>
+            <span class="flex items-start justify-between gap-3">
+              <span>
+                <strong class="block text-sm">Watch the Jungle Line</strong>
+                <span class="block text-xs font-normal text-ember-muted">Study the trees before stepping under them.</span>
+              </span>
+              <span class="text-xs text-ember-muted">Not Yet</span>
+            </span>
+          </button>
+        </div>
       </section>
 
-      <section class="grid gap-2 border border-ember-line bg-ember-panel p-3" aria-label="Log entry">
+      <section id="logSection" class="grid gap-2 border border-ember-line bg-ember-panel p-3" aria-label="Log entry" hidden>
         <div class="border-b border-ember-line pb-2">
           <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">Log Entry</p>
           <strong id="cycle" class="block text-base leading-tight text-ember-text">Entry I</strong>
         </div>
-        <ol id="log" class="min-h-24 max-h-[238px] space-y-1.5 overflow-auto py-1 pl-4 pr-1 text-[0.86rem] text-ember-muted" aria-label="Activity log">
-          <li>Three gull-cries. One broken wave. Warmth clings to your skin.</li>
-        </ol>
+        <ol id="log" class="min-h-24 max-h-[238px] space-y-1.5 overflow-auto py-1 pl-4 pr-1 text-[0.86rem] text-ember-muted" aria-label="Activity log"></ol>
       </section>
     </main>
 
     <aside class="fixed bottom-3 left-3 grid gap-1.5 border border-ember-line bg-ember-bg/90 p-2 text-ember-text" aria-label="Testing speed">
       <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Speed</p>
-      <div class="grid grid-cols-3 gap-1">
+      <div class="grid grid-cols-4 gap-1">
+        <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="0" aria-pressed="false">Pause</button>
         <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="1" aria-pressed="true">1x</button>
         <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="5" aria-pressed="false">5x</button>
         <button class="speedButton min-h-9 px-2 text-xs" type="button" data-speed="10" aria-pressed="false">10x</button>
@@ -125,8 +156,8 @@
       <form method="dialog" class="grid gap-4 p-5">
         <div class="grid gap-2">
           <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
-          <h2 class="text-xl font-bold leading-tight">The cold snaps shut.</h2>
-          <p class="text-sm text-ember-muted">Surf, teeth, salt, dark. Then silence.</p>
+          <h2 id="deathTitle" class="text-xl font-bold leading-tight">The body gives out.</h2>
+          <p id="deathIntro" class="text-sm text-ember-muted">Surf, teeth, salt, dark. Then silence.</p>
         </div>
         <div class="grid gap-1 border border-ember-line bg-ember-panel p-3 text-sm">
           <p id="deathStats" class="text-ember-text"></p>

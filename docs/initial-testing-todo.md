@@ -1,6 +1,6 @@
 # Initial Testing Todo
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 This is a living parking lot for small prototype passes. Use it when the project wanders into design-forward exploration and needs a grounded next step again.
 
@@ -290,6 +290,30 @@ Follow-up:
 - `Scavenge the Tide-Line` should collect `Wood`; it should not restore Warmth directly.
 - Add a small `Tend the Fire` action that spends Wood to keep Fire alive, with Fire providing warmth.
 - `Scavenge the Tide-Line` should become less effective as light fades, so late wood searching is possible but worse than gathering before night.
+- If the player keeps enough fire through the night, the light should cycle back into a new day instead of remaining night forever.
+- On death, hide the stale play surface behind the death prompt so the player is not looking at old light/action state.
+- Stretch the day rhythm toward a Minecraft-like read: at `1x`, a full in-game day is 24 real minutes, with night arriving late enough that the first entry starts at dawn and has time to breathe.
+- Keep an internal seasonal calendar that begins near a mythic El Dorado winter/new-year window, then lengthens daylight toward spring equinox and summer solstice. Do not expose the calendar UI yet; use it as scaffolding for future repeating events that occur in the same seasonal windows each cycle.
+- Make survival feel broader than warmth alone. Keep Warmth as the only active death meter for now, but stage future danger through jungle-noise log entries that rise after dark and are held back by fire.
+- Reframe night and death copy so darkness suggests predation, jungle noise, and large animals testing the firelight, not only cold exposure.
+- Add `Thirst` and `Food` as real body meters. They drain more slowly than Warmth and can end an entry, but there are no refill actions yet.
+- Flatten the Body panel so Warmth, Thirst, and Food have equal visual weight under `Vitals`; keep Wood and Fire under `Supplies` so future resources have room to join without making Warmth dominate the UI.
+- Superseded direction: visible `Exposure` read as a one-ended danger meter, but hot and cold need opposite ends. Use `Body Temp` instead, while heat still increases thirst drain and cold still increases food drain.
+- Start disoriented: only `Get Your Bearings` and the log are visible at first. Bearings Lv 1 reveals Body/Exposure/Light and the fuel loop; Bearings Lv 2 reveals Thirst and Food.
+- Soften the Bearings Lv 1 reveal: show Wood once fuel is understood, but hide Fire and `Tend the Fire` until the player actually has wood or an existing fire.
+- Push the first log-entry clarity into Bearings Lv 1. Move the fuel loop to Bearings Lv 2 and slower body needs to Bearings Lv 3 so each awareness step is smaller.
+- Hide the Log Entry panel itself before Bearings Lv 1; the opening screen should be only the first action until the character can form a coherent entry.
+- Replace the one-ended Exposure danger meter with centered `Body Temp`: starts at 50 steady, yellow from 30-70, blue below 30 for cold, red above 70 for heat, and can kill at either end.
+- Revealing `Scavenge the Tide-Line` should not auto-select it. Stay on `Get Your Bearings` until the player chooses to switch actions.
+- Add a `Pause` speed for playtest reading and inspection.
+- Make `Get Your Bearings` log one message per completed loop, with reveal-level messages replacing stacked generic messages.
+- Keep the pre-log opening shell compact so the future log column does not reserve empty background space before the player has formed an entry.
+- Show action XP as progress within the current level, not total XP against the next square threshold. Example: Lv 2 starts at `0/5`, not `4/9`.
+- Rotate repeat `Get Your Bearings` completion log text so repeated loops do not stack identical entries.
+- Let early tide-line copy imply shipwreck salvage without stating the backstory outright. Worked planks, rope fiber, crate corners, pitch, and bent nails can explain why Wood and later Supplies come from this shore.
+- Later candidate: let repeated salvage reveal small non-persistent supply discoveries or log fragments from the wreckage, so the shoreline tells how the player arrived before it becomes a full inventory system.
+- Split place discovery from salvage: `Get Your Bearings` should reveal places and routes; `Scavenge the Wreckage` should own wreckage/plank/crate/rope flavor.
+- Use Shore Sense Lv 3/Lv 4 to reveal inert place hooks like `Explore the Tide-Line` and `Watch the Jungle Line`, then activate those as future small passes.
 
 ### Pass 6: Night Gets Colder
 
