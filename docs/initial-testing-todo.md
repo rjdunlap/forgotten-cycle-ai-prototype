@@ -226,7 +226,7 @@ Small change:
 - Give `Get Your Bearings` a permanent +10% speed bonus per highest `Shore Sense` level reached, starting on the next entry. Example: a historical max of Lv 5 means +50%, even if a later entry only reaches Lv 3.
 - Use current-entry `Shore Sense` as a light exposure-handling bonus, while keeping `Scavenge the Tide-Line` as wood collection.
 - Hide `Scavenge the Tide-Line` during the first run until the player discovers usable fuel signs; after that discovery, it remains part of later lives.
-- Unlock the `Light` readout in the Condition panel when `Get Your Bearings` reaches Lv 1.
+- Unlock the first `Log Entry` at `Get Your Bearings` Lv 1, then move the Body/Light readout to Lv 2 so the first awareness step stays smaller.
 
 Test:
 
@@ -299,7 +299,7 @@ Follow-up:
 - Add `Thirst` and `Food` as real body meters. They drain more slowly than Warmth and can end an entry, but there are no refill actions yet.
 - Flatten the Body panel so Warmth, Thirst, and Food have equal visual weight under `Vitals`; keep Wood and Fire under `Supplies` so future resources have room to join without making Warmth dominate the UI.
 - Superseded direction: visible `Exposure` read as a one-ended danger meter, but hot and cold need opposite ends. Use `Body Temp` instead, while heat still increases thirst drain and cold still increases food drain.
-- Start disoriented: only `Get Your Bearings` and the log are visible at first. Bearings Lv 1 reveals Body/Exposure/Light and the fuel loop; Bearings Lv 2 reveals Thirst and Food.
+- Start disoriented: only `Get Your Bearings` is visible at first. Bearings Lv 1 reveals the Log Entry; Bearings Lv 2 reveals Body/Light and the fuel loop; Bearings Lv 3 reveals Thirst and Food.
 - Soften the Bearings Lv 1 reveal: show Wood once fuel is understood, but hide Fire and `Tend the Fire` until the player actually has wood or an existing fire.
 - Push the first log-entry clarity into Bearings Lv 1. Move the fuel loop to Bearings Lv 2 and slower body needs to Bearings Lv 3 so each awareness step is smaller.
 - Hide the Log Entry panel itself before Bearings Lv 1; the opening screen should be only the first action until the character can form a coherent entry.
@@ -315,6 +315,9 @@ Follow-up:
 - Split place discovery from salvage: `Get Your Bearings` should reveal places and routes; `Scavenge the Wreckage` should own wreckage/plank/crate/rope flavor.
 - Use Shore Sense Lv 3/Lv 4 to reveal inert place hooks like `Explore the Tide-Line` and `Watch the Jungle Line`, then activate those as future small passes.
 - Make action levels player-facing by action name. Show `Get Your Bearings Lv X` rather than a separate `Shore Sense` skill, and delay XP/mastery math until later Bearings levels make that kind of system readout feel earned.
+- Put early action levels adjacent to the action title, such as `Get Your Bearings - Lv 1`, while keeping the detail line narrative. Push XP/mastery readouts closer to Lv 10.
+- Move Light unlock to `Get Your Bearings` Lv 2.
+- Use `Get Your Bearings` Lv 10 as the global system-readout gate. Before then, all action detail lines should stay narrative and avoid XP, timings, output rates, and mastery math.
 
 ### Pass 6: Night Gets Colder
 

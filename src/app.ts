@@ -56,14 +56,17 @@ const els = {
   woodText: requiredElement<HTMLElement>("#woodText"),
   fireText: requiredElement<HTMLElement>("#fireText"),
   orientButton: requiredElement<HTMLButtonElement>("#orientButton"),
+  orientTitle: requiredElement<HTMLElement>("#orientTitle"),
   orientDetail: requiredElement<HTMLElement>("#orientDetail"),
   orientStatus: requiredElement<HTMLElement>("#orientStatus"),
   orientProgressBar: requiredElement<HTMLElement>("#orientProgressBar"),
   scavengeButton: requiredElement<HTMLButtonElement>("#scavengeButton"),
+  scavengeTitle: requiredElement<HTMLElement>("#scavengeTitle"),
   scavengeDetail: requiredElement<HTMLElement>("#scavengeDetail"),
   scavengeStatus: requiredElement<HTMLElement>("#scavengeStatus"),
   scavengeProgressBar: requiredElement<HTMLElement>("#scavengeProgressBar"),
   fireButton: requiredElement<HTMLButtonElement>("#fireButton"),
+  fireTitle: requiredElement<HTMLElement>("#fireTitle"),
   fireDetail: requiredElement<HTMLElement>("#fireDetail"),
   fireStatus: requiredElement<HTMLElement>("#fireStatus"),
   fireProgressBar: requiredElement<HTMLElement>("#fireProgressBar"),
@@ -136,6 +139,7 @@ function render(): void {
   const orientPercent = Math.min(100, (state.bearingsProgress / bearingsTime) * 100);
   const scavengePercent = state.fuelSourceKnown ? Math.min(100, (state.searchProgress / scavengeTime) * 100) : 0;
   const tendPercent = state.foundWood >= 1 ? Math.min(100, (state.fireProgress / tendFireTime) * 100) : 0;
+  const logKnown = hasLogReadout();
   const bodyKnown = hasBodyReadout();
   const needsKnown = hasNeedsReadout();
   const fireKnown = hasFireReadout();
@@ -144,9 +148,9 @@ function render(): void {
 
   els.cycle.textContent = `Entry ${toRoman(state.cycle)}`;
   els.bodySection.hidden = !bodyKnown;
-  els.logSection.hidden = !bodyKnown;
-  els.app.classList.toggle("app-shell-compact", !bodyKnown);
-  els.app.classList.toggle("app-shell-expanded", bodyKnown);
+  els.logSection.hidden = !logKnown;
+  els.app.classList.toggle("app-shell-compact", !logKnown);
+  els.app.classList.toggle("app-shell-expanded", logKnown);
   els.lightRow.hidden = !hasLightReadout(state);
   els.thirstRow.hidden = !needsKnown;
   els.thirstBarRow.hidden = !needsKnown;
@@ -172,6 +176,7 @@ function render(): void {
 
   els.orientButton.disabled = !state.alive;
   els.orientButton.setAttribute("aria-pressed", String(activity === "orienting"));
+  els.orientTitle.textContent = shoreSenseLevel > 0 ? `Get Your Bearings - Lv ${shoreSenseLevel}` : "Get Your Bearings";
   els.orientDetail.textContent = getBearingsDetail(shoreSenseLevel, bearingsTime, shoreSenseMasteryBonus);
   els.orientStatus.textContent = getActionStatus("orienting");
   els.orientProgressBar.style.width = `${orientPercent}%`;
@@ -179,19 +184,16 @@ function render(): void {
   els.scavengeButton.hidden = !hasFuelReadout();
   els.scavengeButton.disabled = !state.alive || !state.fuelSourceKnown;
   els.scavengeButton.setAttribute("aria-pressed", String(activity === "scavenging"));
-  els.scavengeDetail.textContent = state.fuelSourceKnown
-    ? `Scavenge Lv ${scavengeLevel} (${formatLevelProgress(state.scavengeXp)}) - collect +${formatWood(woodFound)} wood from wreckage about every ${scavengeTime.toFixed(1)}s.${getScavengeLightNote(scavengeLightEfficiency)} Mastery +${Math.round(scavengeMasteryBonus * 100)}%.`
-    : "Find wood signs before scavenging.";
+  els.scavengeTitle.textContent = scavengeLevel > 0 ? `Scavenge the Wreckage - Lv ${scavengeLevel}` : "Scavenge the Wreckage";
+  els.scavengeDetail.textContent = getScavengeDetail(scavengeLevel, scavengeTime, woodFound, scavengeLightEfficiency, scavengeMasteryBonus);
   els.scavengeStatus.textContent = getActionStatus("scavenging");
   els.scavengeProgressBar.style.width = `${scavengePercent}%`;
 
   els.fireButton.hidden = !fireKnown;
   els.fireButton.disabled = !state.alive || !state.fuelSourceKnown || state.foundWood < 1;
   els.fireButton.setAttribute("aria-pressed", String(activity === "tending"));
-  els.fireDetail.textContent =
-    state.foundWood >= 1
-      ? `Firekeeping Lv ${firekeepingLevel} (${formatLevelProgress(state.firekeepingXp)}) - spend 1 wood in ${tendFireTime.toFixed(1)}s. Mastery +${Math.round(firekeepingMasteryBonus * 100)}%.`
-      : "Collect wood before the fire can help.";
+  els.fireTitle.textContent = firekeepingLevel > 0 ? `Tend the Fire - Lv ${firekeepingLevel}` : "Tend the Fire";
+  els.fireDetail.textContent = getFireDetail(firekeepingLevel, tendFireTime, firekeepingMasteryBonus);
   els.fireStatus.textContent = getActionStatus("tending");
   els.fireProgressBar.style.width = `${activity === "tending" ? tendPercent : firePercent}%`;
 
@@ -341,14 +343,47 @@ function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: nu
   }
 
   if (level < 2) {
-    return `Get Your Bearings Lv ${level} - make a clearer entry of light, surf, and where you stand.`;
+    return "Make a clearer entry of light, surf, and where you stand.";
   }
 
   if (level < 3) {
-    return `Get Your Bearings Lv ${level} - sort the wreckage from the wider tide-line.`;
+    return "Sort the wreckage from the wider tide-line.";
   }
 
-  return `Get Your Bearings Lv ${level} (${formatLevelProgress(state.shoreSenseXp)}) - next insight in ${remaining}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
+  if (level < 10) {
+    return `Read the shore for the next useful pattern in ${remaining}s.`;
+  }
+
+  return `Progress ${formatLevelProgress(state.shoreSenseXp)} - next insight in ${remaining}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
+}
+
+function getScavengeDetail(
+  level: number,
+  scavengeTime: number,
+  woodFound: number,
+  lightEfficiency: number,
+  masteryBonus: number
+): string {
+  if (!state.fuelSourceKnown) return "Find wood signs before scavenging.";
+
+  if (!hasSystemReadout()) {
+    if (level < 1) return "Search the broken line for dry wood the fire might accept.";
+    if (level < 3) return "Pick through planks, spars, and rope without trusting every piece to burn.";
+    return "Work the wreckage by memory, leaving the wider shore for later.";
+  }
+
+  return `Progress ${formatLevelProgress(state.scavengeXp)} - collect +${formatWood(woodFound)} wood about every ${scavengeTime.toFixed(1)}s.${getScavengeLightNote(lightEfficiency)} Mastery +${Math.round(masteryBonus * 100)}%.`;
+}
+
+function getFireDetail(level: number, tendFireTime: number, masteryBonus: number): string {
+  if (state.foundWood < 1) return "Collect wood before the fire can help.";
+
+  if (!hasSystemReadout()) {
+    if (level < 1) return "Feed one piece of wood and learn whether the flame takes it.";
+    return "Keep the coals breathing without spending the wood too fast.";
+  }
+
+  return `Progress ${formatLevelProgress(state.firekeepingXp)} - spend 1 wood in ${tendFireTime.toFixed(1)}s. Mastery +${Math.round(masteryBonus * 100)}%.`;
 }
 
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
@@ -410,8 +445,12 @@ function formatLevelProgress(xp: number): string {
   return `${xp - levelStart}/${nextLevelStart - levelStart}`;
 }
 
-function hasBodyReadout(): boolean {
+function hasLogReadout(): boolean {
   return getShoreSenseLevel(state) >= 1 || state.maxShoreSenseLevel >= 1;
+}
+
+function hasBodyReadout(): boolean {
+  return hasLightReadout(state);
 }
 
 function hasNeedsReadout(): boolean {
@@ -434,19 +473,23 @@ function hasJunglePlaceReadout(): boolean {
   return getShoreSenseLevel(state) >= 4 || state.maxShoreSenseLevel >= 4;
 }
 
+function hasSystemReadout(): boolean {
+  return getShoreSenseLevel(state) >= 10 || state.maxShoreSenseLevel >= 10;
+}
+
 function getActionStatus(action: Activity): string {
   if (!state.alive) return "Stopped";
   if (action === "scavenging" && !state.fuelSourceKnown) return "Locked";
   if (action === "tending" && !state.fuelSourceKnown) return "Locked";
   if (action === "tending" && state.foundWood < 1) return "No Wood";
   if (action === "orienting" && activity !== action) {
-    return `Lv ${getShoreSenseLevel(state)}`;
+    return "Idle";
   }
   if (action === "scavenging" && activity !== action) {
-    return `Lv ${getScavengeLevel(state)}`;
+    return "Idle";
   }
   if (action === "tending" && activity !== action) {
-    return `Lv ${getFirekeepingLevel(state)}`;
+    return "Idle";
   }
   return activity === action ? "Active" : "Idle";
 }
