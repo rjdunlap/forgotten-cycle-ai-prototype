@@ -44,4 +44,21 @@
   .meter-fill {
     transition: width 120ms linear;
   }
+
+  .action-card {
+    display: grid;
+    min-height: 72px;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  .action-card[hidden] {
+    display: none;
+  }
+
+  .action-card[aria-pressed="true"] {
+    border-color: #f0c86a;
+    background: #2b382c;
+  }
 }

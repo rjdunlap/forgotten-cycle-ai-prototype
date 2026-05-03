@@ -42,6 +42,10 @@ This is testing one question:
 - The normal simulation pace is slowed down for feel, with `1x`, `5x`, and `10x` testing controls available in the lower-left corner.
 - `Get Your Bearings` is the initial first-life activity.
 - `Scavenge the Tide-Line` becomes available after the player finds signs of usable fuel.
+- Character condition is visually separated from activity choices.
+- Warmth appears in a right-side `Condition` panel on desktop, with dormant Thirst and Food placeholders for future testing.
+- Available actions are shown as action rows with their own progress bars and active/idle/locked status.
+- `Get Your Bearings` doubles as the observe/endure action after the initial tide-line discovery; there is no separate `Hold Still` row.
 - Scavenging periodically finds fuel.
 - Fuel restores warmth.
 - Death happens when Inner Warmth reaches zero.
@@ -69,6 +73,8 @@ Robert provided the following research/design synthesis as a stronger direction 
 Robert also provided a broader lifecycle-exploration design synthesis covering wellness/mortality, faction career ladders, cartographic discovery, knowledge gates, prestige layers, automation, and an eventual hollow-world arc. That material has been ingested into [lifecycle-exploration-research.md](lifecycle-exploration-research.md).
 
 Use that file as the long-horizon reference when answering future design questions so the project does not drift into invented systems. It does not override the current prototype guardrail: keep "The First Ember" small until Robert explicitly asks to expand beyond the death-driven shoreline loop.
+
+Visual and UI-system research from Gemini has been ingested into [visual-systems-bible.md](visual-systems-bible.md). Use it for copy tone, logbook framing, action-row categories, palette direction, and avoiding generic dashboard language.
 
 ### Genre Research
 
