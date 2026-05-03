@@ -411,6 +411,35 @@ Test:
 
 - Check whether the note makes memory feel persistent without distracting from survival.
 
+### Pass 5G: Close to Death and Death Modals
+
+Status: next
+
+Question:
+
+> Do modal interruptions at near-death and death make dying feel more like a narrative moment and less like a UI state change?
+
+Small change:
+
+- Add a **Close to Death** warning modal that pauses the game when any vital reaches a critical threshold. Dismiss to resume; the player still has a chance to recover.
+- Replace the existing death popup with a **Death modal** that also pauses the game:
+  - Copy: "You are nearing the end of your life. / You feel that you could have achieved much more. / Filled with unwillingness, you close your eyes, hoping to start over."
+  - Single button: **REBIRTH**
+- Add a **Deja Vu story popup** at the start of Entry II onward, before the first action is available:
+  - Title: Deja Vu
+  - Copy: "Even while remembering little, you seem to learn things faster than normal people. Strange. Also, you found a book in your pocket. It seems to be a journal of some sort."
+  - Dismiss to continue playing.
+- All modals sit over a darkened overlay that freezes the game tick; tick resumes on close.
+- If Close to Death is showing and the vital hits zero, skip directly to the Death modal without stacking.
+
+Test:
+
+- Let a vital reach the critical threshold and confirm the Close to Death modal appears and pauses the game.
+- Confirm the game resumes from the same state when the warning is dismissed.
+- Let death occur and confirm the Death modal copy and REBIRTH button work correctly.
+- Play into Entry II and confirm the Deja Vu popup appears once before the first action, then never again.
+- Confirm Entry I has no Deja Vu popup.
+
 ## Design Parking Lot
 
 These are interesting but should wait until the basic shoreline loop feels good.

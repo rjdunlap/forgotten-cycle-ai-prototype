@@ -92,12 +92,13 @@ const els = {
   log: requiredElement<HTMLOListElement>("#log"),
   pageFrame: requiredElement<HTMLElement>("#pageFrame"),
   app: requiredElement<HTMLElement>("#app"),
+  closeToDeathDialog: requiredElement<HTMLDialogElement>("#closeToDeathDialog"),
+  keepGoingButton: requiredElement<HTMLButtonElement>("#keepGoingButton"),
   deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
   deathTitle: requiredElement<HTMLElement>("#deathTitle"),
-  deathIntro: requiredElement<HTMLElement>("#deathIntro"),
-  deathStats: requiredElement<HTMLElement>("#deathStats"),
-  deathLesson: requiredElement<HTMLElement>("#deathLesson"),
-  wakeButton: requiredElement<HTMLButtonElement>("#wakeButton")
+  wakeButton: requiredElement<HTMLButtonElement>("#wakeButton"),
+  dejaVuDialog: requiredElement<HTMLDialogElement>("#dejaVuDialog"),
+  dejaVuButton: requiredElement<HTMLButtonElement>("#dejaVuButton")
 };
 
 type Site = "camp" | "wreckage" | "tide" | "jungle";
@@ -108,6 +109,7 @@ let currentSite: Site = "camp";
 let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
+let closeToDeathShown = false;
 let fuelDiscoveryLogged = false;
 let firstFireLogged = false;
 let firstWindbreakLogged = false;
@@ -262,6 +264,12 @@ function render(): void {
 }
 
 function tick(now: number): void {
+  if (els.closeToDeathDialog.open || els.dejaVuDialog.open) {
+    lastTick = now;
+    requestAnimationFrame(tick);
+    return;
+  }
+
   const elapsed = Math.min(0.25, (now - lastTick) / 1000) * (speedMultiplier / 5);
   lastTick = now;
 
@@ -332,6 +340,10 @@ function tick(now: number): void {
 
     if (getFirekeepingLevel(state) > previousFirekeepingLevel) {
       addLog(getFirekeepingLevelMessage(getFirekeepingLevel(state)));
+    }
+
+    if (!closeToDeathShown && !deathShown && isCloseToDeath(state)) {
+      showCloseToDeathDialog();
     }
 
     if (canReset(state) && !deathShown) {
@@ -425,9 +437,22 @@ els.wakeButton.addEventListener("click", () => {
   jungleNoiseStage = 0;
   lastExposurePhase = getExposurePhase(state);
   deathShown = false;
+  closeToDeathShown = false;
   els.deathDialog.close();
   addLogs(getWakeMessages(nextFuelRecognition, nextColdFamiliarity, rememberedFuelSource));
   render();
+
+  if (state.cycle === 2) {
+    els.dejaVuDialog.showModal();
+  }
+});
+
+els.keepGoingButton.addEventListener("click", () => {
+  els.closeToDeathDialog.close();
+});
+
+els.dejaVuButton.addEventListener("click", () => {
+  els.dejaVuDialog.close();
 });
 
 function getActivitySummary(): string {
@@ -871,23 +896,19 @@ function addJungleNoiseLogs(previousThreat: number, currentThreat: number): void
   }
 }
 
+function isCloseToDeath(s: GameState): boolean {
+  return s.innerWarmth <= 12 || s.innerWarmth >= 88 || s.thirst <= 12 || s.food <= 12;
+}
+
+function showCloseToDeathDialog(): void {
+  closeToDeathShown = true;
+  els.closeToDeathDialog.showModal();
+}
+
 function showDeathDialog(): void {
   deathShown = true;
   els.deathTitle.textContent = getDeathTitle(state);
-  els.deathIntro.textContent = getDeathIntro(state);
-  els.deathStats.textContent = getDeathStats(state);
-  els.deathLesson.textContent = getDeathLesson(state.cycle);
   els.deathDialog.showModal();
-}
-
-function getDeathStats(currentState: GameState): string {
-  if (!hasSystemReadout()) {
-    if (currentState.foundWood < 1) return "The entry ends before your hands can name what would burn.";
-    if (currentState.fireStrength <= 0) return "The entry ends with wood gathered and no lasting flame.";
-    return "The entry ends past the first fire. The shore has changed shape in memory.";
-  }
-
-  return `You lasted ${formatDuration(currentState.timeAlive)}, found ${formatWood(currentState.foundWood)} wood, and ended with ${Math.ceil(currentState.thirst)} thirst / ${Math.ceil(currentState.food)} food.`;
 }
 
 function getDeathTitle(currentState: GameState): string {
@@ -897,40 +918,6 @@ function getDeathTitle(currentState: GameState): string {
   if (currentState.innerWarmth <= 0) return "Cold takes you.";
   if (getJungleThreat(currentState) >= 75) return "The jungle reaches the shore.";
   return "The body gives out.";
-}
-
-function getDeathIntro(currentState: GameState): string {
-  if (currentState.thirst <= 0) {
-    return "Your tongue sticks. The surf keeps speaking, useless and bright.";
-  }
-
-  if (currentState.food <= 0) {
-    return "Your hands shake around nothing. The jungle waits out the weakness.";
-  }
-
-  if (currentState.innerWarmth >= MAX_WARMTH) {
-    return "The sun becomes a weight. Salt dries on your skin and the shade stays too far away.";
-  }
-
-  if (currentState.innerWarmth <= 0) {
-    return "The firelight thins. Cold closes over your fingers first, then the rest.";
-  }
-
-  if (getJungleThreat(currentState) >= 75) {
-    return "The fire gutters. Leaves split. Something vast moves faster than thought.";
-  }
-
-  return "Cold, thirst, hunger, salt. Then silence.";
-}
-
-function getDeathLesson(cycle: number): string {
-  const lessons: readonly [string, string, string] = [
-    "The snap is not only cold. Your fingers remember where dry wood waits, and your mouth remembers the cost of salt.",
-    "Your chest still expects the last breath. Your hands remember bark from rot, cedar from soaked driftwood.",
-    "The shore is less silent now. Useful wood stands out before hunger or the jungle can steal your focus."
-  ];
-
-  return lessons[Math.min(cycle - 1, lessons.length - 1)] ?? lessons[0];
 }
 
 function getWakeMessages(

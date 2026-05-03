@@ -84,6 +84,41 @@ Use it as the feel bible for the early coast. The goal is not to clone `A Dark R
 - keep early copy clipped, sensory, and quiet
 - make death a practical and uncanny payout
 
+## Death & Rebirth Modals
+
+Both modals pause the game. The game resumes when the modal is dismissed.
+
+### Close to Death (warning modal)
+
+Triggers when any vital reaches a critically low threshold — before the final death. The player gets one last moment of awareness before the end. Exact copy TBD, but tone should match the death modal: quiet, inward, no game-language.
+
+### Death Modal
+
+Triggers on actual death (any vital hitting its limit). Replaces the existing "Wake Again" popup.
+
+> You are nearing the end of your life.
+> You feel that you could have achieved much more.
+> Filled with unwillingness, you close your eyes, hoping to start over.
+
+**REBIRTH** button dismisses the modal and starts the next cycle.
+
+### Deja Vu (start-of-next-life story popup)
+
+Appears at the beginning of the second life onward, just after waking — before the player can act.
+
+> **Deja Vu**
+>
+> Even while remembering little, you seem to learn things faster than normal people. Strange. Also, you found a book in your pocket. It seems to be a journal of some sort.
+
+This is the first hint of the logbook system. The player does not interact with the journal yet — it is flavor that seeds future logbook reveals. Dismiss to continue.
+
+### Modal Behavior Notes
+
+- All modals sit over a darkened overlay that freezes the game tick.
+- The tick resumes the moment the modal closes.
+- "Close to Death" and "Death" modals should not stack — if the player is already seeing the Close to Death warning and the vital hits zero, skip straight to the Death modal.
+- The "Deja Vu" popup should only appear on Entry II and later; Entry I has no prior memory.
+
 ## Long-Horizon Research Ingest
 
 Robert also provided a broader lifecycle-exploration design synthesis covering wellness/mortality, faction career ladders, cartographic discovery, knowledge gates, prestige layers, automation, and an eventual hollow-world arc. That material has been ingested into [lifecycle-exploration-research.md](lifecycle-exploration-research.md).

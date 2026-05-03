@@ -189,19 +189,42 @@
     </aside>
     </div>
 
+    <dialog id="closeToDeathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
+      <div class="grid gap-4 p-5">
+        <div class="grid gap-2">
+          <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
+          <h2 class="text-xl font-bold leading-tight">The body is failing.</h2>
+          <p class="text-sm text-ember-muted">You can feel it now — something vital, almost spent. A moment remains.</p>
+        </div>
+        <button id="keepGoingButton" type="button">Keep going.</button>
+      </div>
+    </dialog>
+
     <dialog id="deathDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
-      <form method="dialog" class="grid gap-4 p-5">
+      <div class="grid gap-4 p-5">
         <div class="grid gap-2">
           <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
           <h2 id="deathTitle" class="text-xl font-bold leading-tight">The body gives out.</h2>
-          <p id="deathIntro" class="text-sm text-ember-muted">Surf, teeth, salt, dark. Then silence.</p>
         </div>
-        <div class="grid gap-1 border border-ember-line bg-ember-panel p-3 text-sm">
-          <p id="deathStats" class="text-ember-text"></p>
-          <p id="deathLesson" class="text-ember-muted"></p>
+        <div class="grid gap-2 text-sm text-ember-muted">
+          <p>You are nearing the end of your life.</p>
+          <p>You feel that you could have achieved much more.</p>
+          <p>Filled with unwillingness, you close your eyes, hoping to start over.</p>
         </div>
-        <button id="wakeButton" type="button">Hear the Shore Again</button>
-      </form>
+        <button id="wakeButton" type="button">Rebirth</button>
+      </div>
+    </dialog>
+
+    <dialog id="dejaVuDialog" class="w-[min(90vw,390px)] border border-ember-accent/40 bg-ember-bg p-0 text-ember-text backdrop:bg-ember-bg/70">
+      <div class="grid gap-4 p-5">
+        <div class="grid gap-2">
+          <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
+          <h2 class="text-xl font-bold leading-tight">Deja Vu</h2>
+          <p class="text-sm text-ember-muted">Even while remembering little, you seem to learn things faster than normal people. Strange.</p>
+          <p class="text-sm text-ember-muted">Also, you found a book in your pocket. It seems to be a journal of some sort.</p>
+        </div>
+        <button id="dejaVuButton" type="button">Continue</button>
+      </div>
     </dialog>
 
     <script type="module" src="/src/app.ts"></script>
