@@ -22,6 +22,8 @@ Test whether this feels good:
 
 > The player dies from exposure, wakes again with remembered practical knowledge, and survives a little longer because the coast is becoming familiar.
 
+Use [a-dark-room-reference.md](a-dark-room-reference.md) as the feel bible for the early coast: one action first, sparse interface, sensory copy, earned reveal, fire as emotional center, and death as a useful uncanny payout.
+
 ## Immediate Candidate Passes
 
 ### Pass 1: Baseline Feel Check
@@ -318,6 +320,27 @@ Follow-up:
 - Put early action levels adjacent to the action title, such as `Get Your Bearings - Lv 1`, while keeping the detail line narrative. Push XP/mastery readouts closer to Lv 10.
 - Move Light unlock to `Get Your Bearings` Lv 2.
 - Use `Get Your Bearings` Lv 10 as the global system-readout gate. Before then, all action detail lines should stay narrative and avoid XP, timings, output rates, and mastery math.
+
+### Pass 5F: A Dark Room Opening Discipline
+
+Status: candidate
+
+Question:
+
+> Does the opening feel like minimalist discovery rather than an exposed prototype dashboard?
+
+Small change:
+
+- Compare the first 60-90 seconds against `docs/a-dark-room-reference.md`.
+- Confirm the first screen has one unmistakable action and no empty decorative panel.
+- Confirm each visible panel appears because the character has perceived something.
+- Keep the first fire as a felt boundary against night and jungle pressure, not merely a resource converter.
+
+Test:
+
+- Start a fresh Entry I at `1x`.
+- Do not click ahead quickly; watch whether waiting creates curiosity or friction.
+- Note the first moment where the UI feels too game-like, too numerical, or too explained.
 
 ### Pass 6: Night Gets Colder
 

@@ -192,7 +192,8 @@ function render(): void {
   els.fireButton.hidden = !fireKnown;
   els.fireButton.disabled = !state.alive || !state.fuelSourceKnown || state.foundWood < 1;
   els.fireButton.setAttribute("aria-pressed", String(activity === "tending"));
-  els.fireTitle.textContent = firekeepingLevel > 0 ? `Tend the Fire - Lv ${firekeepingLevel}` : "Tend the Fire";
+  els.fireTitle.textContent =
+    firekeepingLevel > 0 || state.fireStrength > 0 ? `Tend the Fire - Lv ${firekeepingLevel}` : "Start a Fire";
   els.fireDetail.textContent = getFireDetail(firekeepingLevel, tendFireTime, firekeepingMasteryBonus);
   els.fireStatus.textContent = getActionStatus("tending");
   els.fireProgressBar.style.width = `${activity === "tending" ? tendPercent : firePercent}%`;
@@ -252,7 +253,7 @@ function tick(now: number): void {
     }
 
     if (getScavengeLevel(state) > previousScavengeLevel) {
-      addLog(`Your hands sort the tide-line faster. Scavenge reaches Lv ${getScavengeLevel(state)} this entry.`);
+      addLog(`Your hands sort salvage from wreckage faster. Scavenge reaches Lv ${getScavengeLevel(state)} this entry.`);
     }
 
     if (state.fireStrength > previousFire + 1) {
@@ -291,7 +292,7 @@ els.scavengeButton.addEventListener("click", () => {
   if (!state.fuelSourceKnown) return;
 
   activity = "scavenging";
-  addLog("You pick through the wreckage for wood the fire might accept.");
+  addLog("You pick through the wreckage for anything useful. Dry pieces go aside for fire or shelter.");
   render();
 });
 
@@ -300,7 +301,7 @@ els.fireButton.addEventListener("click", () => {
   if (!state.fuelSourceKnown || state.foundWood < 1) return;
 
   activity = "tending";
-  addLog("You crouch near the coals and feed the fire.");
+  addLog(state.fireStrength > 0 ? "You crouch near the coals and feed the fire." : "You clear a place above the wash and try to make the first fire.");
   render();
 });
 
@@ -331,19 +332,18 @@ els.wakeButton.addEventListener("click", () => {
 
 function getActivitySummary(): string {
   if (speedMultiplier === 0) return "Paused";
-  if (activity === "orienting") return "Current: reading the shore";
-  if (activity === "scavenging") return "Current: collecting wood";
-  return "Current: tending the fire";
+  if (!state.alive) return "Ended";
+  return "Choose a shore action";
 }
 
 function getBearingsDetail(level: number, bearingsTime: number, masteryBonus: number): string {
   const remaining = Math.max(0, bearingsTime - state.bearingsProgress).toFixed(1);
   if (level < 1) {
-    return `Notice tide, wind, and the shape of the shore in ${remaining}s.`;
+    return `Hold still until one clear thing reaches you in ${remaining}s.`;
   }
 
   if (level < 2) {
-    return "Make a clearer entry of light, surf, and where you stand.";
+    return "Notice light, water, and the shape beneath you.";
   }
 
   if (level < 3) {
@@ -367,19 +367,19 @@ function getScavengeDetail(
   if (!state.fuelSourceKnown) return "Find wood signs before scavenging.";
 
   if (!hasSystemReadout()) {
-    if (level < 1) return "Search the broken line for dry wood the fire might accept.";
-    if (level < 3) return "Pick through planks, spars, and rope without trusting every piece to burn.";
-    return "Work the wreckage by memory, leaving the wider shore for later.";
+    if (level < 1) return "Search the broken line for anything useful enough to keep.";
+    if (level < 3) return "Sort planks, spars, rope, and dry pieces that might burn or build.";
+    return "Work the wreckage by memory, separating fuel from future shelter.";
   }
 
   return `Progress ${formatLevelProgress(state.scavengeXp)} - collect +${formatWood(woodFound)} wood about every ${scavengeTime.toFixed(1)}s.${getScavengeLightNote(lightEfficiency)} Mastery +${Math.round(masteryBonus * 100)}%.`;
 }
 
 function getFireDetail(level: number, tendFireTime: number, masteryBonus: number): string {
-  if (state.foundWood < 1) return "Collect wood before the fire can help.";
+  if (state.foundWood < 1) return "Find dry salvage before you can choose a camp spot.";
 
   if (!hasSystemReadout()) {
-    if (level < 1) return "Feed one piece of wood and learn whether the flame takes it.";
+    if (level < 1) return "Clear a small place above the wash and coax a first flame.";
     return "Keep the coals breathing without spending the wood too fast.";
   }
 
@@ -388,7 +388,7 @@ function getFireDetail(level: number, tendFireTime: number, masteryBonus: number
 
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
   if (previousLevel < 1 && currentLevel >= 1) {
-    return "Salt. Light. Surf. You make the first clean mark in your head.";
+    return "Light breaks white behind your eyelids. Something cold drags past your legs and pulls away.";
   }
 
   if (completions === 2) {
@@ -396,7 +396,7 @@ function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: num
   }
 
   if (previousLevel < 2 && currentLevel >= 2) {
-    return "Above the wrack line, driftwood ribs and snapped planks wait under dry needles.";
+    return "Above the wrack line, driftwood ribs and snapped planks bleach in the early sun.";
   }
 
   if (previousLevel < 3 && currentLevel >= 3) {
@@ -506,27 +506,54 @@ function getLightLabel(): string {
 
 function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: number, fireWarmRate: number): string {
   const phase = getExposurePhase(state);
+  const needsKnown = hasNeedsReadout();
+  const systemKnown = hasSystemReadout();
+
   if (phase === "sunlit") {
     if (!hasLightReadout(state)) {
       return `Something in the air is holding the worst of the shore back.`;
     }
     if (getTimeInDay(state) < getDawnEnd(state)) {
+      if (!systemKnown) {
+        return needsKnown
+          ? `Dawn keeps the chill off, though your mouth and belly are beginning to report in.`
+          : `Dawn keeps the worst chill off your skin.`;
+      }
       return `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s.`;
     }
     if (getDayNumber(state) > 1) {
+      if (!systemKnown) {
+        return needsKnown
+          ? `The returning sun warms you, but the heat asks for water.`
+          : `The returning sun holds the shore in a livable glare.`;
+      }
       return `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
+    }
+    if (!systemKnown) {
+      return needsKnown ? `The day warms you, but the heat asks for water.` : `The day holds the shore in a livable glare.`;
     }
     return `The day pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
   }
 
   if (phase === "sunset") {
+    if (!systemKnown) {
+      return needsKnown
+        ? `The light is leaving. Cold creeps in, and hunger makes it sharper.`
+        : `The light is leaving, and the shore stops helping.`;
+    }
     return `The light is leaving. Cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
   }
 
   if (getJungleThreat(state) >= 75) {
+    if (!systemKnown) {
+      return `The fire is losing its luster. The jungle grows louder at the edge of the light.`;
+    }
     return `The fire is losing its luster. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; cold and the jungle press in.`;
   }
 
+  if (!systemKnown) {
+    return `Firelight holds close. Past it, the dark keeps moving.`;
+  }
   return `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Cold pulls body temp -${coldRate.toFixed(1)}/s.`;
 }
 
@@ -552,7 +579,7 @@ function getExposureShiftMessage(currentState: GameState): string {
 function findWoodMessage(currentState: GameState): string {
   const messages: readonly [string, string, string, string] = [
     "You find a tar-dark plank, too worked to be a branch.",
-    "Dry pine needles hide beneath a rib of broken hull.",
+    "A curl of dry shavings waits inside a split rib of hull.",
     "A cedar spar waits just above the tide mark.",
     "You strip brittle bark and rope fiber from a fallen beam."
   ];

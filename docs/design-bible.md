@@ -1,6 +1,6 @@
 # Forgotten Cycle AI Prototype Design Bible
 
-Last updated: 2026-05-02
+Last updated: 2026-05-03
 
 This document is the working handoff for future code/design sessions. It captures the current prototype direction, research notes, and decisions made so far. Treat it as a living design bible, not a locked specification.
 
@@ -8,7 +8,7 @@ This document is the working handoff for future code/design sessions. It capture
 
 This repository is an AI-assisted prototype, separate from Robert's existing Forgotten Cycle project with a friend. It can borrow the working name and some thematic DNA, but its purpose is narrower: quickly test whether a reincarnation-style idle loop feels satisfying.
 
-The current target is closer to Idle Reincarnator and A Usual Idle Life than to RuneScape or Melvor Idle. The first prototype should stay small enough to play, judge, and revise quickly.
+The current target is closer to Idle Reincarnator, A Usual Idle Life, and the opening feel of A Dark Room than to RuneScape or Melvor Idle. The first prototype should stay small enough to play, judge, and revise quickly.
 
 ## Collaboration Principles
 
@@ -29,7 +29,7 @@ Repository: https://github.com/rjdunlap/forgotten-cycle-ai-prototype
 
 Current slice: "The First Ember"
 
-The player wakes on a cold shore at night. Inner Warmth drains over time. The first activity is `Get Your Bearings`, which reveals signs of usable fuel along the tide-line. The player can then start `Scavenge the Tide-Line` to find wood, brush, or other fuel. Scavenged fuel restores warmth. Eventually the player dies from cold. Death opens a short wake-again popup, then the next life starts with automatic adaptation. Fuel recognition is the main early improvement; cold familiarity exists as a smaller secondary adaptation.
+The player wakes on a strange coast with almost no interface at first. The first activity is `Get Your Bearings`, which gradually reveals the log entry, light, body state, wreckage, wood, fire, and slower body needs. The player scavenges the wreckage for wood, tends a fire, and tries to survive the night as body temperature, thirst, food, and jungle pressure become legible. Eventually the player dies from cold, heat, thirst, hunger, or the wider threat implied by the dark. Death opens a short wake-again popup, then the next entry starts with automatic adaptation.
 
 This is testing one question:
 
@@ -37,22 +37,27 @@ This is testing one question:
 
 ## Current Mechanics
 
-- `Inner Warmth` starts at 45 out of 100.
-- Cold drains warmth continuously.
+- `Body Temp` starts steady at 50 out of 100, with cold danger below the comfort band and heat danger above it.
+- The day cycle starts with dawn/daylight, moves through sunset, then into night.
+- Sunlight and fire affect body temperature; cold, heat, thirst, and food drain rates are phase-aware.
+- `Thirst` and `Food` are real body meters, but they reveal later than the first action so the opening does not become a dashboard immediately.
 - The normal simulation pace is slowed down for feel, with `1x`, `5x`, and `10x` testing controls available in the lower-left corner.
 - `Get Your Bearings` is the initial first-life activity.
-- `Scavenge the Tide-Line` becomes available after the player finds signs of usable fuel.
+- The log appears only after the player has enough orientation to form `Entry I`.
+- Body, light, supplies, fire, thirst, food, and place hooks reveal through early Bearings levels.
+- `Scavenge the Wreckage` becomes available after the player recognizes fuel and salvage signs.
+- Scavenging collects `Wood`; it does not directly restore body temperature.
+- `Tend the Fire` spends wood to strengthen the fire, and the fire pulls body temperature back toward steady during non-sunlit phases.
 - Character condition is visually separated from activity choices.
-- Warmth appears in a right-side `Condition` panel on desktop, with dormant Thirst and Food placeholders for future testing.
+- Body state appears in a side panel on desktop once the player has earned that readout.
 - Available actions are shown as action rows with their own progress bars and active/idle/locked status.
-- `Get Your Bearings` doubles as the observe/endure action after the initial tide-line discovery; there is no separate `Hold Still` row.
-- Scavenging periodically finds fuel.
-- Fuel restores warmth.
-- Death happens when Inner Warmth reaches zero.
-- Death opens a short popup with time survived and fuel found.
+- `Get Your Bearings`, `Scavenge the Wreckage`, and `Tend the Fire` each have current-entry action levels.
+- Current-entry action levels reset on death, while max-ever mastery activates on the next entry.
+- System math is delayed until later Bearings levels; early action details stay narrative.
+- The same wake cue returns after death: three gull-cries and one broken wave.
+- Death opens a short popup with time survived, wood found, and body-state ending.
 - `Wake Again` starts a new cycle from that popup.
-- Each death automatically improves fuel recognition.
-- Cold familiarity also improves in a smaller way, slightly reducing warmth drain.
+- Each death can improve remembered fuel recognition and cold familiarity.
 - Visible memory currency and upgrade spending are intentionally hidden for now.
 
 Current implementation files:
@@ -67,6 +72,18 @@ Current implementation files:
 ## Research Note: Reincarnation Loop
 
 Robert provided the following research/design synthesis as a stronger direction for the first loop.
+
+## A Dark Room Reference
+
+Robert provided a deep ludonarrative analysis of `A Dark Room` as a reference for minimalist unfolding, action-timer pacing, sparse sensory copy, interface-as-story, and the firelit opening. That material has been ingested into [a-dark-room-reference.md](a-dark-room-reference.md).
+
+Use it as the feel bible for the early coast. The goal is not to clone `A Dark Room`; the goal is to preserve the same disciplined unfolding:
+
+- begin with one grounded action
+- let panels appear because the character perceives more
+- make fire emotionally central before it is economically optimized
+- keep early copy clipped, sensory, and quiet
+- make death a practical and uncanny payout
 
 ## Long-Horizon Research Ingest
 
