@@ -330,6 +330,7 @@ Follow-up:
 - Converted inert place hooks into a small site navigation shell: Camp, Wreckage, Tide-Line, and Jungle Line are real places, actions filter by current site, and route buttons include return paths instead of disabled promises.
 - Tuned respawn reveal flow: remembered max Bearings now speeds the next entry but does not keep log/body/sites/system readouts open; each wake must re-form perception through current-entry Bearings again.
 - Added an early haze beat to the first coherent log/wake copy, borrowing the survival-confusion setup without adding a separate tutorial popup yet.
+- Added a small tide-line needs pass: once Thirst and Food are legible, `Cup Seep Water` and `Gather Shore Food` restore those meters directly, while `Wade In` now hints that something lives under the surf and can very rarely end the cycle outright.
 - Removed width tweening from action-row progress bars so fast action completion does not visibly rebound backward; vitals can still animate smoothly.
 
 ### Pass 5F: A Dark Room Opening Discipline

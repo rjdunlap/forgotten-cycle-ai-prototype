@@ -5,7 +5,10 @@ import {
   MAX_WINDBREAK,
   WINDBREAK_WOOD_COST,
   COMFORT_WARMTH,
+  FOOD_FOUND,
   SWIM_COOL_TARGET,
+  SURF_PREDATOR_CHANCE_PER_SECOND,
+  WATER_FOUND,
   type Activity,
   canReset,
   createGameState,
@@ -18,6 +21,8 @@ import {
   getFirekeepingLevel,
   getFirekeepingMasteryBonus,
   getFireWarmRate,
+  getGatherFoodTime,
+  getGatherWaterTime,
   getHeatRate,
   getJungleThreat,
   getScavengeLevel,
@@ -85,6 +90,14 @@ const els = {
   windbreakProgressBar: requiredElement<HTMLElement>("#windbreakProgressBar"),
   swimButton: requiredElement<HTMLButtonElement>("#swimButton"),
   swimStatus: requiredElement<HTMLElement>("#swimStatus"),
+  waterButton: requiredElement<HTMLButtonElement>("#waterButton"),
+  waterDetail: requiredElement<HTMLElement>("#waterDetail"),
+  waterStatus: requiredElement<HTMLElement>("#waterStatus"),
+  waterProgressBar: requiredElement<HTMLElement>("#waterProgressBar"),
+  foodButton: requiredElement<HTMLButtonElement>("#foodButton"),
+  foodDetail: requiredElement<HTMLElement>("#foodDetail"),
+  foodStatus: requiredElement<HTMLElement>("#foodStatus"),
+  foodProgressBar: requiredElement<HTMLElement>("#foodProgressBar"),
   placesSection: requiredElement<HTMLElement>("#placesSection"),
   campSiteButton: requiredElement<HTMLButtonElement>("#campSiteButton"),
   campSiteTitle: requiredElement<HTMLElement>("#campSiteTitle"),
@@ -114,6 +127,9 @@ const els = {
   keepGoingButton: requiredElement<HTMLButtonElement>("#keepGoingButton"),
   deathDialog: requiredElement<HTMLDialogElement>("#deathDialog"),
   deathTitle: requiredElement<HTMLElement>("#deathTitle"),
+  deathLineOne: requiredElement<HTMLElement>("#deathLineOne"),
+  deathLineTwo: requiredElement<HTMLElement>("#deathLineTwo"),
+  deathLineThree: requiredElement<HTMLElement>("#deathLineThree"),
   wakeButton: requiredElement<HTMLButtonElement>("#wakeButton"),
   dejaVuDialog: requiredElement<HTMLDialogElement>("#dejaVuDialog"),
   dejaVuButton: requiredElement<HTMLButtonElement>("#dejaVuButton")
@@ -167,6 +183,8 @@ function render(): void {
   const scavengeTime = getScavengeTime(state);
   const tendFireTime = getTendFireTime(state);
   const buildWindbreakTime = getBuildWindbreakTime(state);
+  const gatherWaterTime = getGatherWaterTime(state);
+  const gatherFoodTime = getGatherFoodTime(state);
   const woodFound = getWoodFound(state);
   const atCamp = currentSite === "camp";
   const coldRate = getColdRate(state, atCamp);
@@ -185,6 +203,8 @@ function render(): void {
   const tendPercent = state.foundWood >= 1 ? Math.min(100, (state.fireProgress / tendFireTime) * 100) : 0;
   const windbreakPercent =
     state.foundWood >= WINDBREAK_WOOD_COST ? Math.min(100, (state.shelterProgress / buildWindbreakTime) * 100) : 0;
+  const waterPercent = state.thirst < MAX_THIRST ? Math.min(100, (state.waterProgress / gatherWaterTime) * 100) : 100;
+  const foodGatherPercent = state.food < MAX_FOOD ? Math.min(100, (state.foodProgress / gatherFoodTime) * 100) : 100;
   const logKnown = hasLogReadout();
   const bodyKnown = hasBodyReadout();
   const needsKnown = hasNeedsReadout();
@@ -276,6 +296,21 @@ function render(): void {
   els.swimButton.disabled = !state.alive;
   els.swimButton.setAttribute("aria-pressed", String(activity === "swimming"));
   els.swimStatus.textContent = getActionStatus("swimming");
+
+  els.waterButton.hidden = !hasNeedsReadout() || !isActionAvailableAtSite("drinking");
+  els.waterButton.disabled = !state.alive || state.thirst >= MAX_THIRST;
+  els.waterButton.setAttribute("aria-pressed", String(activity === "drinking"));
+  els.waterDetail.textContent = getWaterDetail(gatherWaterTime);
+  els.waterStatus.textContent = getActionStatus("drinking");
+  els.waterProgressBar.style.width = `${waterPercent}%`;
+
+  els.foodButton.hidden = !hasNeedsReadout() || !isActionAvailableAtSite("foraging");
+  els.foodButton.disabled = !state.alive || state.food >= MAX_FOOD;
+  els.foodButton.setAttribute("aria-pressed", String(activity === "foraging"));
+  els.foodDetail.textContent = getFoodDetail(gatherFoodTime);
+  els.foodStatus.textContent = getActionStatus("foraging");
+  els.foodProgressBar.style.width = `${foodGatherPercent}%`;
+
   els.windbreakButton.disabled =
     !state.alive || !state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK;
   els.windbreakButton.setAttribute("aria-pressed", String(activity === "sheltering"));
@@ -321,6 +356,8 @@ function tick(now: number): void {
     const previousWood = state.foundWood;
     const previousFire = state.fireStrength;
     const previousWindbreak = state.windbreakStrength;
+    const previousThirst = state.thirst;
+    const previousFood = state.food;
     const previousShoreSenseXp = state.shoreSenseXp;
     const previousShoreSenseLevel = getShoreSenseLevel(state);
     const previousScavengeLevel = getScavengeLevel(state);
@@ -330,6 +367,12 @@ function tick(now: number): void {
     const previousJungleThreat = getJungleThreat(state);
     const activeActivity = isActionAvailableAtSite(activity) ? activity : "orienting";
     state = runTick(state, elapsed, activeActivity, currentSite === "camp");
+
+    if (activeActivity === "swimming" && state.alive && Math.random() < elapsed * SURF_PREDATOR_CHANCE_PER_SECOND) {
+      state = { ...state, alive: false, deathCause: "surf" };
+      addLog("A dark shape rolls under the green water. The surf closes over you before you can draw breath.");
+    }
+
     lastExposurePhase = getExposurePhase(state);
 
     if (!knewFuelSource && state.fuelSourceKnown && !fuelDiscoveryLogged) {
@@ -384,18 +427,27 @@ function tick(now: number): void {
       }
     }
 
+    if (state.thirst > previousThirst + 1) {
+      addLog("Cold seep water cuts the salt from your mouth for a while.");
+    }
+
+    if (state.food > previousFood + 1) {
+      addLog("You swallow what the rocks surrender. It sits strange, but it gives the body something to burn.");
+    }
+
     addJungleNoiseLogs(previousJungleThreat, getJungleThreat(state));
 
     if (getFirekeepingLevel(state) > previousFirekeepingLevel) {
       addLog(getFirekeepingLevelMessage(getFirekeepingLevel(state)));
     }
 
-    if (!closeToDeathShown && !deathShown && isCloseToDeath(state)) {
-      showCloseToDeathDialog();
-    }
-
     if (canReset(state) && !deathShown) {
+      if (els.closeToDeathDialog.open) {
+        els.closeToDeathDialog.close();
+      }
       showDeathDialog();
+    } else if (!closeToDeathShown && !deathShown && isCloseToDeath(state)) {
+      showCloseToDeathDialog();
     }
     render();
   }
@@ -451,7 +503,27 @@ els.swimButton.addEventListener("click", () => {
   if (!isActionAvailableAtSite("swimming")) return;
 
   activity = "swimming";
-  addLog("You wade into the surf until the cold water reaches your chest.");
+  addLog("You wade into the surf until the cold water reaches your chest. Something brushes past your leg, then is gone.");
+  render();
+});
+
+els.waterButton.addEventListener("click", () => {
+  if (!state.alive) return;
+  if (state.thirst >= MAX_THIRST) return;
+  if (!isActionAvailableAtSite("drinking")) return;
+
+  activity = "drinking";
+  addLog("You kneel where water beads through dark stone and try to catch it before the salt reaches it.");
+  render();
+});
+
+els.foodButton.addEventListener("click", () => {
+  if (!state.alive) return;
+  if (state.food >= MAX_FOOD) return;
+  if (!isActionAvailableAtSite("foraging")) return;
+
+  activity = "foraging";
+  addLog("You work the rocks for tight shells, slick weed, and anything your hunger dares to name as food.");
   render();
 });
 
@@ -527,10 +599,14 @@ els.dejaVuButton.addEventListener("click", () => {
 function getActivitySummary(): string {
   if (speedMultiplier === 0) return "Paused";
   if (!state.alive) return "Ended";
+  if (!hasLogReadout()) return "The shore is bright.";
+  if (!hasFuelReadout()) return "An entry is forming.";
   if (activity === "orienting") return getSiteSummary();
   if (activity === "scavenging") return "Sorting the wreckage.";
   if (activity === "sheltering") return "Raising a windbreak.";
-  if (activity === "swimming") return "In the water.";
+  if (activity === "swimming") return "In the surf.";
+  if (activity === "drinking") return "Catching seep water.";
+  if (activity === "foraging") return "Working the rocks.";
   return state.fireStrength > 0 ? "Keeping the dark back." : "Making a first fire.";
 }
 
@@ -562,6 +638,7 @@ function isActionAvailableAtSite(action: Activity): boolean {
   if (action === "scavenging") return currentSite === "wreckage";
   if (action === "tending" || action === "sheltering") return currentSite === "camp";
   if (action === "swimming") return currentSite === "tide";
+  if (action === "drinking" || action === "foraging") return currentSite === "tide";
   return false;
 }
 
@@ -650,6 +727,28 @@ function getWindbreakDetail(buildWindbreakTime: number, protection: number): str
   }
 
   return `Spend ${WINDBREAK_WOOD_COST} wood in ${remaining}s. Heat and cold pressure -${Math.round(protection * 100)}%.`;
+}
+
+function getWaterDetail(gatherWaterTime: number): string {
+  if (state.thirst >= MAX_THIRST) return "Your mouth is quiet for now.";
+
+  if (!hasSystemReadout()) {
+    if (state.thirst < 35) return "The thin freshwater beads vanish almost as quickly as you find them.";
+    return "Find the thin places where fresh water threads through stone.";
+  }
+
+  return `Restore +${WATER_FOUND} thirst in ${gatherWaterTime.toFixed(1)}s.`;
+}
+
+function getFoodDetail(gatherFoodTime: number): string {
+  if (state.food >= MAX_FOOD) return "Your belly stops asking for the moment.";
+
+  if (!hasSystemReadout()) {
+    if (state.food < 35) return "Shells fight your fingers. Hunger makes the work less delicate.";
+    return "Work loose shellfish and edible kelp from the rocks.";
+  }
+
+  return `Restore +${FOOD_FOUND} food in ${gatherFoodTime.toFixed(1)}s.`;
 }
 
 function getShoreSenseCompletionMessage(previousLevel: number, currentLevel: number, completions: number): string {
@@ -819,6 +918,8 @@ function getActionStatus(action: Activity): string {
   if (action === "tending" && state.foundWood < 1) return "No Wood";
   if (action === "sheltering" && state.windbreakStrength >= MAX_WINDBREAK) return "Built";
   if (action === "sheltering" && state.foundWood < WINDBREAK_WOOD_COST) return `Need ${WINDBREAK_WOOD_COST} Wood`;
+  if (action === "drinking" && state.thirst >= MAX_THIRST) return "Quiet";
+  if (action === "foraging" && state.food >= MAX_FOOD) return "Quiet";
   if (action === "orienting" && activity !== action) {
     return "Idle";
   }
@@ -832,7 +933,13 @@ function getActionStatus(action: Activity): string {
     return "Idle";
   }
   if (action === "swimming" && activity !== action) {
-    return `Cools to ${SWIM_COOL_TARGET}`;
+    return hasSystemReadout() ? `Cools to ${SWIM_COOL_TARGET}` : "Cold surf";
+  }
+  if (action === "drinking" && activity !== action) {
+    return "Thirst";
+  }
+  if (action === "foraging" && activity !== action) {
+    return "Food";
   }
   return activity === action ? "Active" : "Idle";
 }
@@ -981,16 +1088,69 @@ function showCloseToDeathDialog(): void {
 function showDeathDialog(): void {
   deathShown = true;
   els.deathTitle.textContent = getDeathTitle(state);
+  const deathCopy = getDeathCopy(state);
+  els.deathLineOne.textContent = deathCopy[0];
+  els.deathLineTwo.textContent = deathCopy[1];
+  els.deathLineThree.textContent = deathCopy[2];
   els.deathDialog.showModal();
 }
 
 function getDeathTitle(currentState: GameState): string {
+  if (currentState.deathCause === "surf") return "Something in the water takes you.";
   if (currentState.thirst <= 0) return "Thirst takes you.";
   if (currentState.food <= 0) return "Hunger hollows you out.";
   if (currentState.innerWarmth >= MAX_WARMTH) return "Heat takes you.";
   if (currentState.innerWarmth <= 0) return "Cold takes you.";
   if (getJungleThreat(currentState) >= 75) return "The jungle reaches the shore.";
   return "The body gives out.";
+}
+
+function getDeathCopy(currentState: GameState): readonly [string, string, string] {
+  if (currentState.deathCause === "surf") {
+    return [
+      "The cold was useful for one breath.",
+      "Then the water opened beneath you, all pressure and teeth and green-black light.",
+      "The shore is gone before fear can become a thought."
+    ];
+  }
+
+  if (currentState.deathCause === "thirst") {
+    return [
+      "Your mouth has forgotten how to be wet.",
+      "The surf keeps offering itself, bright with salt and no mercy.",
+      "You close your eyes with the shape of fresh water still missing from the shore."
+    ];
+  }
+
+  if (currentState.deathCause === "hunger") {
+    return [
+      "Your body empties itself into weakness.",
+      "Hands, knees, breath - each one becomes too heavy to command.",
+      "You close your eyes knowing the shore must have hidden food somewhere."
+    ];
+  }
+
+  if (currentState.deathCause === "heat") {
+    return [
+      "The sun presses everything flat and white.",
+      "Your thoughts dry out before your body stops moving.",
+      "You close your eyes carrying one lesson: heat can kill as cleanly as cold."
+    ];
+  }
+
+  if (currentState.deathCause === "cold") {
+    return [
+      "The cold finishes its slow work.",
+      "Fingers, breath, flame - all of them go distant, then quiet.",
+      "You close your eyes with the shape of shelter still unfinished."
+    ];
+  }
+
+  return [
+    "You are nearing the end of your life.",
+    "You feel that you could have achieved much more.",
+    "Filled with unwillingness, you close your eyes, hoping to start over."
+  ];
 }
 
 function getWakeMessages(

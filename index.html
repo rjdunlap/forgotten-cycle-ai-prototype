@@ -131,9 +131,35 @@
           <span class="flex items-start justify-between gap-3">
             <span>
               <strong class="block text-sm">Wade In</strong>
-              <span class="block text-xs font-normal text-ember-muted">The surf will pull the heat out of you.</span>
+              <span class="block text-xs font-normal text-ember-muted">The surf will pull heat from you. Something moves under it.</span>
             </span>
-            <span id="swimStatus" class="text-xs text-ember-muted">Cools to 25</span>
+            <span id="swimStatus" class="text-xs text-ember-muted">Cold surf</span>
+          </span>
+        </button>
+
+        <button id="waterButton" class="action-card" type="button" hidden>
+          <span class="flex items-start justify-between gap-3">
+            <span>
+              <strong class="block text-sm">Cup Seep Water</strong>
+              <span id="waterDetail" class="block text-xs font-normal text-ember-muted">Find the thin places where fresh water threads through stone.</span>
+            </span>
+            <span id="waterStatus" class="text-xs text-ember-muted">Thirst</span>
+          </span>
+          <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
+            <span id="waterProgressBar" class="meter-fill action-meter block h-full bg-ember-accent-strong"></span>
+          </span>
+        </button>
+
+        <button id="foodButton" class="action-card" type="button" hidden>
+          <span class="flex items-start justify-between gap-3">
+            <span>
+              <strong class="block text-sm">Gather Shore Food</strong>
+              <span id="foodDetail" class="block text-xs font-normal text-ember-muted">Work loose shellfish and edible kelp from the rocks.</span>
+            </span>
+            <span id="foodStatus" class="text-xs text-ember-muted">Food</span>
+          </span>
+          <span class="mt-2 block h-2 overflow-hidden border border-ember-line bg-[#101510]">
+            <span id="foodProgressBar" class="meter-fill action-meter block h-full bg-ember-accent"></span>
           </span>
         </button>
 
@@ -224,7 +250,7 @@
         <div class="grid gap-2">
           <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
           <h2 class="text-xl font-bold leading-tight">The body is failing.</h2>
-          <p class="text-sm text-ember-muted">You can feel it now — something vital, almost spent. A moment remains.</p>
+          <p class="text-sm text-ember-muted">You can feel it now - something vital, almost spent. A moment remains.</p>
         </div>
         <button id="keepGoingButton" type="button">Keep going.</button>
       </div>
@@ -237,9 +263,9 @@
           <h2 id="deathTitle" class="text-xl font-bold leading-tight">The body gives out.</h2>
         </div>
         <div class="grid gap-2 text-sm text-ember-muted">
-          <p>You are nearing the end of your life.</p>
-          <p>You feel that you could have achieved much more.</p>
-          <p>Filled with unwillingness, you close your eyes, hoping to start over.</p>
+          <p id="deathLineOne">You are nearing the end of your life.</p>
+          <p id="deathLineTwo">You feel that you could have achieved much more.</p>
+          <p id="deathLineThree">Filled with unwillingness, you close your eyes, hoping to start over.</p>
         </div>
         <button id="wakeButton" type="button">Rebirth</button>
       </div>

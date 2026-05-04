@@ -45,8 +45,14 @@ export const SUNSET_SCAVENGE_EFFICIENCY = 0.65;
 export const NIGHT_SCAVENGE_EFFICIENCY = 0.35;
 export const SWIM_COOL_RATE = 5;
 export const SWIM_COOL_TARGET = 25;
+export const GATHER_WATER_TIME = 4.8;
+export const WATER_FOUND = 24;
+export const GATHER_FOOD_TIME = 5.6;
+export const FOOD_FOUND = 18;
+export const SURF_PREDATOR_CHANCE_PER_SECOND = 0.0015;
 
-export type Activity = "orienting" | "scavenging" | "tending" | "sheltering" | "swimming";
+export type Activity = "orienting" | "scavenging" | "tending" | "sheltering" | "swimming" | "drinking" | "foraging";
+export type DeathCause = "cold" | "heat" | "thirst" | "hunger" | "surf";
 export type ExposurePhase = "sunlit" | "sunset" | "night";
 export type SeasonalEventWindow = "year-start" | "spring-equinox" | "summer-solstice" | "late-year";
 
@@ -61,6 +67,8 @@ export interface GameState {
   fireStrength: number;
   shelterProgress: number;
   windbreakStrength: number;
+  waterProgress: number;
+  foodProgress: number;
   bearingsProgress: number;
   coastalKnowledge: number;
   shoreSenseXp: number;
@@ -74,6 +82,7 @@ export interface GameState {
   activeFirekeepingMasteryLevel: number;
   timeAlive: number;
   alive: boolean;
+  deathCause?: DeathCause;
   fuelSourceKnown: boolean;
   fuelRecognition: number;
   coldFamiliarity: number;
@@ -91,6 +100,8 @@ export function createGameState(): GameState {
     fireStrength: 0,
     shelterProgress: 0,
     windbreakStrength: 0,
+    waterProgress: 0,
+    foodProgress: 0,
     bearingsProgress: 0,
     coastalKnowledge: 0,
     shoreSenseXp: 0,
@@ -104,6 +115,7 @@ export function createGameState(): GameState {
     activeFirekeepingMasteryLevel: 0,
     timeAlive: 0,
     alive: true,
+    deathCause: undefined,
     fuelSourceKnown: false,
     fuelRecognition: 0,
     coldFamiliarity: 0
@@ -174,6 +186,14 @@ export function getTendFireTime(state: GameState): number {
 
 export function getBuildWindbreakTime(_state: GameState): number {
   return BUILD_WINDBREAK_TIME;
+}
+
+export function getGatherWaterTime(_state: GameState): number {
+  return GATHER_WATER_TIME;
+}
+
+export function getGatherFoodTime(_state: GameState): number {
+  return GATHER_FOOD_TIME;
 }
 
 export function hasLightReadout(state: GameState): boolean {
@@ -286,6 +306,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   let fireStrength = Math.max(0, state.fireStrength - FIRE_DECAY_RATE * seconds);
   let shelterProgress = state.shelterProgress;
   let windbreakStrength = state.windbreakStrength;
+  let waterProgress = state.waterProgress;
+  let foodProgress = state.foodProgress;
   let bearingsProgress = state.bearingsProgress;
   let shoreSenseXp = state.shoreSenseXp;
   let maxShoreSenseLevel = state.maxShoreSenseLevel;
@@ -297,8 +319,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   const coldRate = getColdRate(state, atCamp);
   const heatRate = getHeatRate(state, atCamp);
   let innerWarmth = state.innerWarmth + (heatRate - coldRate) * seconds;
-  const thirst = Math.max(0, state.thirst - (THIRST_DECAY_RATE + heatRate * HEAT_THIRST_RATE_BONUS) * seconds);
-  const food = Math.max(0, state.food - (FOOD_DECAY_RATE + coldRate * COLD_FOOD_RATE_BONUS) * seconds);
+  let thirst = Math.max(0, state.thirst - (THIRST_DECAY_RATE + heatRate * HEAT_THIRST_RATE_BONUS) * seconds);
+  let food = Math.max(0, state.food - (FOOD_DECAY_RATE + coldRate * COLD_FOOD_RATE_BONUS) * seconds);
   if (innerWarmth < COMFORT_WARMTH) {
     innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getSunWarmRate(state) * seconds);
   }
@@ -311,6 +333,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   innerWarmth = Math.min(MAX_WARMTH, Math.max(0, innerWarmth));
   const scavengeTime = getScavengeTime(state);
   const bearingsTime = getBearingsTime(state);
+  const gatherWaterTime = getGatherWaterTime(state);
+  const gatherFoodTime = getGatherFoodTime(state);
 
   if (activity === "orienting") {
     bearingsProgress += seconds * (1 + getShoreSenseMasteryBonus(state));
@@ -354,6 +378,28 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
     }
   }
 
+  if (activity === "drinking" && thirst < MAX_THIRST) {
+    waterProgress += seconds;
+    while (waterProgress >= gatherWaterTime && thirst < MAX_THIRST) {
+      waterProgress -= gatherWaterTime;
+      thirst = Math.min(MAX_THIRST, thirst + WATER_FOUND);
+    }
+  }
+
+  if (activity === "foraging" && food < MAX_FOOD) {
+    foodProgress += seconds;
+    while (foodProgress >= gatherFoodTime && food < MAX_FOOD) {
+      foodProgress -= gatherFoodTime;
+      food = Math.min(MAX_FOOD, food + FOOD_FOUND);
+    }
+  }
+
+  let deathCause: DeathCause | undefined;
+  if (innerWarmth <= 0) deathCause = "cold";
+  if (innerWarmth >= MAX_WARMTH) deathCause = "heat";
+  if (thirst <= 0) deathCause = "thirst";
+  if (food <= 0) deathCause = "hunger";
+
   return {
     ...state,
     innerWarmth,
@@ -365,6 +411,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
     fireStrength,
     shelterProgress,
     windbreakStrength,
+    waterProgress,
+    foodProgress,
     bearingsProgress,
     shoreSenseXp,
     maxShoreSenseLevel,
@@ -375,7 +423,8 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
     coastalKnowledge: state.coastalKnowledge + seconds,
     timeAlive: state.timeAlive + seconds,
     fuelSourceKnown,
-    alive: innerWarmth > 0 && innerWarmth < MAX_WARMTH && thirst > 0 && food > 0
+    alive: deathCause === undefined,
+    deathCause
   };
 }
 
@@ -398,6 +447,8 @@ export function resetCycle(state: GameState): GameState {
     fireStrength: 0,
     shelterProgress: 0,
     windbreakStrength: 0,
+    waterProgress: 0,
+    foodProgress: 0,
     bearingsProgress: 0,
     coastalKnowledge: 0,
     shoreSenseXp: 0,
@@ -408,6 +459,7 @@ export function resetCycle(state: GameState): GameState {
     activeFirekeepingMasteryLevel: state.maxFirekeepingLevel,
     timeAlive: 0,
     alive: true,
+    deathCause: undefined,
     fuelSourceKnown: state.fuelSourceKnown,
     fuelRecognition: state.fuelRecognition + (state.fuelSourceKnown ? 1 : 0),
     coldFamiliarity: state.coldFamiliarity + 1

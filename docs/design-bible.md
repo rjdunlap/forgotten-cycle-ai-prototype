@@ -41,6 +41,8 @@ This is testing one question:
 - The day cycle starts with dawn/daylight, moves through sunset, then into night.
 - Sunlight and fire affect body temperature; cold, heat, thirst, and food drain rates are phase-aware.
 - `Thirst` and `Food` are real body meters, but they reveal later than the first action so the opening does not become a dashboard immediately.
+- Once the tide-line and body needs are legible, `Cup Seep Water` and `Gather Shore Food` can restore thirst and food without adding inventory, cooking, spoilage, or a broad survival economy yet.
+- `Wade In` can cool an overheated body, but the surf is not safe; it carries a small chance of an immediate cycle-ending predator beat.
 - The normal simulation pace is slowed down for feel, with `1x`, `5x`, and `10x` testing controls available in the lower-left corner.
 - `Get Your Bearings` is the initial first-life activity.
 - The log appears only after the player has enough orientation to form `Entry I`.
