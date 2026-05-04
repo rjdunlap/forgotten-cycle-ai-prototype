@@ -43,8 +43,10 @@ export const SCAVENGE_LEVEL_TIME_BONUS = 0.08;
 export const FIREKEEPING_LEVEL_TIME_BONUS = 0.1;
 export const SUNSET_SCAVENGE_EFFICIENCY = 0.65;
 export const NIGHT_SCAVENGE_EFFICIENCY = 0.35;
+export const SWIM_COOL_RATE = 5;
+export const SWIM_COOL_TARGET = 25;
 
-export type Activity = "orienting" | "scavenging" | "tending" | "sheltering";
+export type Activity = "orienting" | "scavenging" | "tending" | "sheltering" | "swimming";
 export type ExposurePhase = "sunlit" | "sunset" | "night";
 export type SeasonalEventWindow = "year-start" | "spring-equinox" | "summer-solstice" | "late-year";
 
@@ -226,7 +228,7 @@ export function getSeasonalEventWindow(state: GameState): SeasonalEventWindow {
   return "late-year";
 }
 
-export function getColdRate(state: GameState): number {
+export function getColdRate(state: GameState, atCamp = true): number {
   const phase = getExposurePhase(state);
   const phaseMultiplier = phase === "sunlit" ? 0 : phase === "sunset" ? 0.35 : 1;
   const familiarityBonus = Math.min(
@@ -237,16 +239,17 @@ export function getColdRate(state: GameState): number {
     MAX_SHORE_SENSE_COLD_RATE_BONUS,
     getShoreSenseLevel(state) * SHORE_SENSE_COLD_RATE_BONUS
   );
+  const windbreak = atCamp ? getWindbreakProtection(state) : 0;
 
-  return COLD_RATE * phaseMultiplier * (1 - familiarityBonus - shoreSenseBonus) * (1 - getWindbreakProtection(state));
+  return COLD_RATE * phaseMultiplier * (1 - familiarityBonus - shoreSenseBonus) * (1 - windbreak);
 }
 
 export function getSunWarmRate(state: GameState): number {
   return getExposurePhase(state) === "sunlit" && getTimeInDay(state) < getDawnEnd(state) ? SUN_WARM_RATE : 0;
 }
 
-export function getFireWarmRate(state: GameState): number {
-  return state.fireStrength > 0 && getExposurePhase(state) !== "sunlit" ? FIRE_WARM_RATE : 0;
+export function getFireWarmRate(state: GameState, atCamp = true): number {
+  return atCamp && state.fireStrength > 0 && getExposurePhase(state) !== "sunlit" ? FIRE_WARM_RATE : 0;
 }
 
 export function getJungleThreat(state: GameState): number {
@@ -257,9 +260,10 @@ export function getJungleThreat(state: GameState): number {
   return Math.min(100, Math.max(35, 35 + (MAX_WARMTH - state.fireStrength) * 0.65));
 }
 
-export function getHeatRate(state: GameState): number {
+export function getHeatRate(state: GameState, atCamp = true): number {
   const phaseHeat = getExposurePhase(state) === "sunlit" && getTimeInDay(state) >= getDawnEnd(state) ? HEAT_RATE : 0;
-  return phaseHeat * (1 - getWindbreakProtection(state));
+  const windbreak = atCamp ? getWindbreakProtection(state) : 0;
+  return phaseHeat * (1 - windbreak);
 }
 
 export function getWindbreakProtection(state: GameState): number {
@@ -273,7 +277,7 @@ export function getScavengeLightEfficiency(state: GameState): number {
   return NIGHT_SCAVENGE_EFFICIENCY;
 }
 
-export function runTick(state: GameState, seconds = 1, activity: Activity = "scavenging"): GameState {
+export function runTick(state: GameState, seconds = 1, activity: Activity = "scavenging", atCamp = true): GameState {
   if (!state.alive) return state;
 
   let foundWood = state.foundWood;
@@ -290,16 +294,19 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   let firekeepingXp = state.firekeepingXp;
   let maxFirekeepingLevel = state.maxFirekeepingLevel;
   let fuelSourceKnown = state.fuelSourceKnown;
-  const coldRate = getColdRate(state);
-  const heatRate = getHeatRate(state);
+  const coldRate = getColdRate(state, atCamp);
+  const heatRate = getHeatRate(state, atCamp);
   let innerWarmth = state.innerWarmth + (heatRate - coldRate) * seconds;
   const thirst = Math.max(0, state.thirst - (THIRST_DECAY_RATE + heatRate * HEAT_THIRST_RATE_BONUS) * seconds);
   const food = Math.max(0, state.food - (FOOD_DECAY_RATE + coldRate * COLD_FOOD_RATE_BONUS) * seconds);
   if (innerWarmth < COMFORT_WARMTH) {
     innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getSunWarmRate(state) * seconds);
   }
-  if (state.fireStrength > 0 && innerWarmth < COMFORT_WARMTH) {
-    innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getFireWarmRate(state) * seconds);
+  if (innerWarmth < COMFORT_WARMTH) {
+    innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getFireWarmRate(state, atCamp) * seconds);
+  }
+  if (activity === "swimming") {
+    innerWarmth = Math.max(SWIM_COOL_TARGET, innerWarmth - SWIM_COOL_RATE * seconds);
   }
   innerWarmth = Math.min(MAX_WARMTH, Math.max(0, innerWarmth));
   const scavengeTime = getScavengeTime(state);
