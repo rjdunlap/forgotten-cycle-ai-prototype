@@ -101,3 +101,39 @@
     background: #2b382c;
   }
 }
+
+#app[data-phase="sunset"] {
+  border-color: rgba(180, 90, 20, 0.5);
+  transition: border-color 6s ease;
+}
+
+#app[data-phase="night"] {
+  border-color: rgba(15, 50, 30, 0.8);
+  transition: border-color 6s ease;
+}
+
+#app[data-phase="rain"] {
+  border-color: rgba(50, 90, 130, 0.6);
+  transition: border-color 3s ease;
+}
+
+#app[data-phase="sunlit"] {
+  border-color: rgba(210, 168, 79, 0.2);
+  transition: border-color 8s ease;
+}
+
+#rainOverlay {
+  background-image: repeating-linear-gradient(
+    108deg,
+    transparent,
+    transparent 3px,
+    rgba(100, 140, 180, 0.08) 3px,
+    rgba(100, 140, 180, 0.08) 4px
+  );
+  animation: rain-fall 0.25s linear infinite;
+}
+
+@keyframes rain-fall {
+  from { background-position: 0 0; }
+  to   { background-position: -18px 72px; }
+}

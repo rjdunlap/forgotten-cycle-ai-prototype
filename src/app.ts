@@ -10,6 +10,7 @@ import {
   SURF_PREDATOR_CHANCE_PER_SECOND,
   NIGHT_PREDATOR_CHANCE_PER_SECOND,
   SUNSET_PREDATOR_CHANCE_PER_SECOND,
+  isRaining,
   WATER_FOUND,
   type Activity,
   canReset,
@@ -119,6 +120,8 @@ const els = {
   dbgFood: requiredElement<HTMLElement>("#dbgFood"),
   dbgPhase: requiredElement<HTMLElement>("#dbgPhase"),
   dbgWetness: requiredElement<HTMLElement>("#dbgWetness"),
+  wetnessRow: requiredElement<HTMLElement>("#wetnessRow"),
+  wetnessText: requiredElement<HTMLElement>("#wetnessText"),
   dbgCtdShown: requiredElement<HTMLElement>("#dbgCtdShown"),
   dbgCtdCond: requiredElement<HTMLElement>("#dbgCtdCond"),
   dbgDeathShown: requiredElement<HTMLElement>("#dbgDeathShown"),
@@ -154,6 +157,7 @@ let firstFireLogged = false;
 let firstWindbreakLogged = false;
 let jungleNoiseStage = 0;
 let lastExposurePhase = getExposurePhase(state);
+let wasRaining = false;
 
 function requiredElement<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -264,6 +268,8 @@ function render(): void {
   els.foodBar.style.width = `${foodPercent}%`;
   els.foodText.textContent = getFoodLabel(state.food, systemKnown);
   els.conditionDetail.textContent = getConditionDetail(coldRate, heatRate, sunWarmRate, fireWarmRate, getWindbreakProtection(state));
+  els.wetnessRow.hidden = state.wetness < 10;
+  els.wetnessText.textContent = getWetnessLabel(state.wetness);
   els.woodText.textContent = formatWood(state.foundWood);
   els.fireText.textContent = `${Math.ceil(state.fireStrength)} / ${MAX_WARMTH}`;
   els.windbreakText.textContent = getWindbreakLabel(state.windbreakStrength, systemKnown);
@@ -324,6 +330,23 @@ function render(): void {
 
   els.app.hidden = !state.alive;
   els.app.classList.toggle("opacity-20", !state.alive);
+  els.app.dataset.phase = isRaining(state) ? "rain" : getExposurePhase(state);
+
+  // Background overlays: night darkening + rain
+  const nightOverlay = document.getElementById("nightOverlay")!;
+  const rainOverlay = document.getElementById("rainOverlay") as HTMLElement;
+  const currentPhase = getExposurePhase(state);
+  if (currentPhase === "sunlit") {
+    nightOverlay.style.background = "rgba(4,8,4,0)";
+  } else if (currentPhase === "sunset") {
+    nightOverlay.style.background = "rgba(30,15,0,0.3)";
+  } else {
+    nightOverlay.style.background = "rgba(4,8,4,0.6)";
+  }
+  if (isRaining(state)) {
+    nightOverlay.style.background = "rgba(10,20,30,0.45)";
+  }
+  rainOverlay.hidden = !isRaining(state);
 
   for (const button of els.speedButtons) {
     const isActive = Number(button.dataset.speed) === speedMultiplier;
@@ -404,6 +427,15 @@ function tick(now: number): void {
         jungleNoiseStage = 1;
       }
     }
+
+    const nowRaining = isRaining(state);
+    if (nowRaining && !wasRaining) {
+      addLog("The sky tears open. Fat drops hammer the sand. Everything soaks through before you can move.");
+    }
+    if (!nowRaining && wasRaining) {
+      addLog("The rain breaks. Steam rises off the sand. The air is heavier than before.");
+    }
+    wasRaining = nowRaining;
 
     if (state.shoreSenseXp > previousShoreSenseXp) {
       addLog(getShoreSenseCompletionMessage(previousShoreSenseLevel, getShoreSenseLevel(state), state.shoreSenseXp));
@@ -830,8 +862,8 @@ function getBodyTemperatureLabel(bodyTemperature: number, systemKnown = hasSyste
   if (!systemKnown) {
     if (bodyTemperature <= 0) return "cold";
     if (bodyTemperature >= MAX_WARMTH) return "dead";
-    if (bodyTemperature < 25) return "numb";
-    if (bodyTemperature < 40) return "shivering";
+    if (bodyTemperature < 25) return "clammy";
+    if (bodyTemperature < 40) return "cramped";
     if (bodyTemperature < 60) return "steady";
     if (bodyTemperature < 75) return "flushed";
     if (bodyTemperature < 88) return "searing";
@@ -872,6 +904,13 @@ function getWindbreakLabel(strength: number, systemKnown = hasSystemReadout()): 
   if (strength < 75) return "rough";
   if (strength < MAX_WINDBREAK) return "holding";
   return "sheltered";
+}
+
+function getWetnessLabel(wetness: number): string {
+  if (wetness < 25) return "damp";
+  if (wetness < 50) return "wet";
+  if (wetness < 75) return "soaked";
+  return "drenched";
 }
 
 function getBodyTemperatureColor(bodyTemperature: number): string {
@@ -965,6 +1004,7 @@ function getLightLabel(): string {
   const phase = getExposurePhase(state);
   const day = getDayNumber(state);
   const dayPrefix = day > 1 ? `day ${day}, ` : "";
+  if (isRaining(state)) return `${dayPrefix}raining`;
   if (phase === "sunlit" && getTimeInDay(state) < getDawnEnd(state)) return `${dayPrefix}dawn`;
   if (phase === "sunlit") return `${dayPrefix}daylight`;
   if (phase === "sunset") return `${dayPrefix}fading`;
@@ -977,16 +1017,25 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
   const systemKnown = hasSystemReadout();
   const hasWindbreak = windbreakProtection > 0;
 
+  if (isRaining(state)) {
+    if (!systemKnown) {
+      return hasWindbreak
+        ? `Rain hammers the coast. The windbreak holds some of it back. Everything else soaks through.`
+        : `Rain hammers the coast. The damp reaches all the way in. Nothing will dry until morning.`;
+    }
+    return `Rain soaks everything. Wetness builds fast. Cold drains body temp -${coldRate.toFixed(1)}/s.`;
+  }
+
   if (phase === "sunlit") {
     if (!hasLightReadout(state)) {
-      return `Something in the air is holding the worst of the shore back.`;
+      return `Something in the air is holding the worst of the coast back.`;
     }
     if (getTimeInDay(state) < getDawnEnd(state)) {
       if (!systemKnown) {
-        if (hasWindbreak) return `Dawn warms the rough shelter. Wind passes around it instead of through you.`;
+        if (hasWindbreak) return `Dawn burns the damp off the shelter. The wind passes around instead of through.`;
         return needsKnown
-          ? `Dawn keeps the chill off, though your mouth and belly are beginning to report in.`
-          : `Dawn keeps the worst chill off your skin.`;
+          ? `Dawn is already warm. Your mouth and your belly are starting to report in.`
+          : `Dawn steams off the sand. The worst of the damp lifts with it.`;
       }
       return hasWindbreak
         ? `Dawn pulls body temp toward steady ${sunWarmRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
@@ -995,16 +1044,16 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
     if (getDayNumber(state) > 1) {
       if (!systemKnown) {
         return needsKnown
-          ? `The returning sun warms you, but the heat asks for water.`
-          : `The returning sun holds the shore in a livable glare.`;
+          ? `The sun is back. The heat is already asking for water.`
+          : `The returning sun burns the coast into something livable again.`;
       }
       return hasWindbreak
         ? `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
         : `The returning sun pushes body temp +${heatRate.toFixed(1)}/s. Thirst drains faster.`;
     }
     if (!systemKnown) {
-      if (hasWindbreak) return `The sun leans hard on the shore, but the rough wall keeps a little shade.`;
-      return needsKnown ? `The day warms you, but the heat asks for water.` : `The day holds the shore in a livable glare.`;
+      if (hasWindbreak) return `The sun presses hard on the coast. The rough wall keeps a strip of shade.`;
+      return needsKnown ? `The heat is building. Your body is asking for water already.` : `The coast holds in a thick, livable glare.`;
     }
     return hasWindbreak
       ? `The day pushes body temp +${heatRate.toFixed(1)}/s. Windbreak reduces heat and cold pressure ${Math.round(windbreakProtection * 100)}%.`
@@ -1013,23 +1062,23 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
 
   if (phase === "sunset") {
     if (!systemKnown) {
-      if (hasWindbreak) return `The light is leaving. Cold finds the gaps, but not your whole skin.`;
+      if (hasWindbreak) return `The light is leaving. Humidity finds the gaps, but not your whole skin.`;
       return needsKnown
-        ? `The light is leaving. Cold creeps in, and hunger makes it sharper.`
-        : `The light is leaving, and the shore stops helping.`;
+        ? `The light is leaving. The damp creeps in, and hunger makes it heavier.`
+        : `The light is leaving. The coast stops holding heat.`;
     }
     return hasWindbreak
-      ? `The light is leaving. Windbreak softens the cold to -${coldRate.toFixed(1)}/s.`
-      : `The light is leaving. Cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
+      ? `The light is leaving. Windbreak softens the damp cold to -${coldRate.toFixed(1)}/s.`
+      : `The light is leaving. Damp cold pulls body temp -${coldRate.toFixed(1)}/s. Hunger bites harder.`;
   }
 
   if (getJungleThreat(state) >= 75) {
     if (!systemKnown) {
-      return `The fire is losing its luster. The jungle grows louder at the edge of the light.`;
+      return `The fire is losing ground. The jungle presses in at the edge of the light.`;
     }
     return hasWindbreak
-      ? `The fire is losing its luster. Windbreak softens the cold; the jungle still presses in.`
-      : `The fire is losing its luster. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; cold and the jungle press in.`;
+      ? `The fire is losing ground. Windbreak softens the damp; the jungle still presses in.`
+      : `The fire is losing ground. It pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s; the damp and the dark press in.`;
   }
 
   if (!systemKnown) {
@@ -1037,8 +1086,8 @@ function getConditionDetail(coldRate: number, heatRate: number, sunWarmRate: num
     return `Firelight holds close. Past it, the dark keeps moving.`;
   }
   return hasWindbreak
-    ? `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Windbreak softens the cold to -${coldRate.toFixed(1)}/s.`
-    : `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Cold pulls body temp -${coldRate.toFixed(1)}/s.`;
+    ? `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Windbreak softens the damp cold to -${coldRate.toFixed(1)}/s.`
+    : `Fire pulls body temp toward steady ${fireWarmRate.toFixed(1)}/s. Damp cold pulls body temp -${coldRate.toFixed(1)}/s.`;
 }
 
 function getScavengeLightNote(efficiency: number): string {

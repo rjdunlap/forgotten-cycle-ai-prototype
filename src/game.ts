@@ -7,6 +7,11 @@ export const STARTING_THIRST = 100;
 export const STARTING_FOOD = 100;
 export const COLD_RATE = 2;
 export const HEAT_RATE = 0.1;
+export const PEAK_HEAT_RATE = 0.3;
+export const RAIN_START_DAY = 2;
+export const RAIN_START_TIME = 90;
+export const RAIN_DURATION = 72;
+export const RAIN_WETNESS_RATE = 2.0;
 export const THIRST_DECAY_RATE = 0.16;
 export const FOOD_DECAY_RATE = 0.035;
 export const HEAT_THIRST_RATE_BONUS = 0.08;
@@ -51,9 +56,9 @@ export const SUNSET_SCAVENGE_EFFICIENCY = 0.65;
 export const NIGHT_SCAVENGE_EFFICIENCY = 0.35;
 export const SWIM_COOL_RATE = 5;
 export const SWIM_COOL_TARGET = 25;
-export const GATHER_WATER_TIME = 4.8;
+export const GATHER_WATER_TIME = 10.0;
 export const WATER_FOUND = 24;
-export const GATHER_FOOD_TIME = 5.6;
+export const GATHER_FOOD_TIME = 13.0;
 export const FOOD_FOUND = 18;
 export const SURF_PREDATOR_CHANCE_PER_SECOND = 0.0015;
 export const NIGHT_PREDATOR_CHANCE_PER_SECOND = 0.004;
@@ -315,10 +320,18 @@ export function getJungleThreat(state: GameState): number {
   return Math.min(100, Math.max(35, 35 + (MAX_WARMTH - state.fireStrength) * 0.65));
 }
 
+export function isRaining(state: GameState): boolean {
+  const day = getDayNumber(state);
+  const timeInDay = getTimeInDay(state);
+  return day === RAIN_START_DAY && timeInDay >= RAIN_START_TIME && timeInDay < RAIN_START_TIME + RAIN_DURATION;
+}
+
 export function getHeatRate(state: GameState, atCamp = true): number {
-  const phaseHeat = getExposurePhase(state) === "sunlit" && getTimeInDay(state) >= getDawnEnd(state) ? HEAT_RATE : 0;
+  if (getExposurePhase(state) !== "sunlit" || getTimeInDay(state) < getDawnEnd(state)) return 0;
+  const daylightProgress = (getTimeInDay(state) - getDawnEnd(state)) / (getDaylightEnd(state) - getDawnEnd(state));
+  const isPeak = daylightProgress > 0.2 && daylightProgress < 0.8;
   const windbreak = atCamp ? getWindbreakProtection(state) : 0;
-  return phaseHeat * (1 - windbreak);
+  return (isPeak ? PEAK_HEAT_RATE : HEAT_RATE) * (1 - windbreak);
 }
 
 export function getWindbreakProtection(state: GameState): number {
@@ -354,7 +367,9 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   // Wetness: builds through night humidity, dries in full sun
   let wetness = state.wetness;
   const phase = getExposurePhase(state);
-  if (phase === "night") {
+  if (isRaining(state)) {
+    wetness = Math.min(100, wetness + RAIN_WETNESS_RATE * seconds);
+  } else if (phase === "night") {
     wetness = Math.min(100, wetness + WETNESS_NIGHT_RATE * seconds);
   } else if (phase === "sunset") {
     wetness = Math.min(100, wetness + WETNESS_SUNSET_RATE * seconds);

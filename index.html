@@ -6,7 +6,9 @@
     <title>Forgotten Cycle AI Prototype</title>
   </head>
   <body class="grid min-h-screen place-items-center bg-ember-bg bg-cover bg-center font-sans text-ember-text">
-    <div id="pageFrame" class="page-frame page-frame-compact grid gap-2.5">
+    <div id="nightOverlay" style="position:fixed;inset:0;pointer-events:none;z-index:0;background:rgba(4,8,4,0);transition:background 8s ease;"></div>
+    <div id="rainOverlay" style="position:fixed;inset:0;pointer-events:none;z-index:1;" hidden></div>
+    <div id="pageFrame" class="page-frame page-frame-compact grid gap-2.5" style="position:relative;z-index:2;">
     <main id="app" class="app-shell app-shell-compact grid gap-2.5 border border-ember-accent/20 bg-ember-bg/90 p-3.5 transition-opacity duration-300 sm:p-4" aria-label="Forgotten Cycle">
       <section id="bodySection" class="grid gap-3 border border-ember-line bg-ember-panel p-3.5 md:col-span-2" aria-label="You" hidden>
         <div class="flex items-start justify-between gap-3">
@@ -44,6 +46,10 @@
               </div>
               <div id="foodBarRow" class="h-1.5 overflow-hidden border border-ember-line bg-[#101510]" aria-label="Food" hidden>
                 <div id="foodBar" class="meter-fill h-full bg-ember-accent"></div>
+              </div>
+              <div id="wetnessRow" class="flex items-center justify-between gap-3 pt-1" hidden>
+                <span>Damp</span>
+                <span id="wetnessText" class="text-xs uppercase text-ember-muted">dry</span>
               </div>
             </div>
             <p id="conditionDetail" class="text-xs text-ember-muted">Something warm still holds the cold back.</p>
