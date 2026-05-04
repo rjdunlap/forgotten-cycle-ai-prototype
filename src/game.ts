@@ -2,16 +2,21 @@ export const MAX_WARMTH = 100;
 export const MAX_THIRST = 100;
 export const MAX_FOOD = 100;
 export const COMFORT_WARMTH = 50;
-export const STARTING_WARMTH = 40;
+export const STARTING_WARMTH = 16;
 export const STARTING_THIRST = 100;
 export const STARTING_FOOD = 100;
-export const COLD_RATE = 7;
-export const HEAT_RATE = 0.55;
+export const COLD_RATE = 2;
+export const HEAT_RATE = 0.1;
 export const THIRST_DECAY_RATE = 0.16;
 export const FOOD_DECAY_RATE = 0.035;
 export const HEAT_THIRST_RATE_BONUS = 0.08;
 export const COLD_FOOD_RATE_BONUS = 0.035;
-export const SUN_WARM_RATE = 5;
+export const SUN_WARM_RATE = 1.5;
+export const WETNESS_NIGHT_RATE = 0.6;
+export const WETNESS_SUNSET_RATE = 0.2;
+export const WETNESS_DRY_RATE = 0.8;
+export const WETNESS_SWIM_AMOUNT = 30;
+export const MAX_WETNESS_COLD_MULT = 1.5;
 export const DAY_LENGTH = 288;
 export const DAWN_LENGTH = 24;
 export const SUNSET_LENGTH = 36;
@@ -26,7 +31,8 @@ export const BASE_WOOD_FOUND = 1;
 export const TEND_FIRE_TIME = 2.8;
 export const FIRE_FROM_WOOD = 28;
 export const FIRE_DECAY_RATE = 3.2;
-export const FIRE_WARM_RATE = 8;
+export const FIRE_WARM_RATE = 1.2;
+export const FIRE_DRY_RATE = 0.5;
 export const BUILD_WINDBREAK_TIME = 6.2;
 export const WINDBREAK_WOOD_COST = 3;
 export const WINDBREAK_FROM_BUILD = 70;
@@ -50,15 +56,18 @@ export const WATER_FOUND = 24;
 export const GATHER_FOOD_TIME = 5.6;
 export const FOOD_FOUND = 18;
 export const SURF_PREDATOR_CHANCE_PER_SECOND = 0.0015;
+export const NIGHT_PREDATOR_CHANCE_PER_SECOND = 0.004;
+export const SUNSET_PREDATOR_CHANCE_PER_SECOND = 0.0008;
 
 export type Activity = "orienting" | "scavenging" | "tending" | "sheltering" | "swimming" | "drinking" | "foraging";
-export type DeathCause = "cold" | "heat" | "thirst" | "hunger" | "surf";
+export type DeathCause = "cold" | "heat" | "thirst" | "hunger" | "surf" | "predator";
 export type ExposurePhase = "sunlit" | "sunset" | "night";
 export type SeasonalEventWindow = "year-start" | "spring-equinox" | "summer-solstice" | "late-year";
 
 export interface GameState {
   cycle: number;
   innerWarmth: number;
+  wetness: number;
   thirst: number;
   food: number;
   foundWood: number;
@@ -92,6 +101,7 @@ export function createGameState(): GameState {
   return {
     cycle: 1,
     innerWarmth: STARTING_WARMTH,
+    wetness: 0,
     thirst: STARTING_THIRST,
     food: STARTING_FOOD,
     foundWood: 0,
@@ -248,9 +258,34 @@ export function getSeasonalEventWindow(state: GameState): SeasonalEventWindow {
   return "late-year";
 }
 
+export function getNightColdProgress(state: GameState): number {
+  const timeInDay = getTimeInDay(state);
+  const nightStart = getNightStart(state);
+  const nightLength = DAY_LENGTH - nightStart;
+  const timeIntoNight = timeInDay >= nightStart ? timeInDay - nightStart : DAY_LENGTH - nightStart + timeInDay;
+  const t = Math.min(1, timeIntoNight / nightLength);
+  // Tropical rhythm: gentle ramp to 30% (golden hour dissipating),
+  // steeper through humidity spike, peaks at pre-dawn cold spike
+  if (t < 0.4) return (t / 0.4) * 0.3;
+  if (t < 0.75) return 0.3 + ((t - 0.4) / 0.35) * 0.4;
+  return 0.7 + ((t - 0.75) / 0.25) * 0.3;
+}
+
+export function getWetnessMultiplier(state: GameState): number {
+  return 1 + (state.wetness / 100) * (MAX_WETNESS_COLD_MULT - 1);
+}
+
 export function getColdRate(state: GameState, atCamp = true): number {
   const phase = getExposurePhase(state);
-  const phaseMultiplier = phase === "sunlit" ? 0 : phase === "sunset" ? 0.35 : 1;
+  let phaseMultiplier: number;
+  if (phase === "sunlit") {
+    phaseMultiplier = 0;
+  } else if (phase === "sunset") {
+    phaseMultiplier = 0.05;
+  } else {
+    // Night: gradient from 0.1 at nightfall to 0.5 at pre-dawn cold spike
+    phaseMultiplier = 0.1 + 0.4 * getNightColdProgress(state);
+  }
   const familiarityBonus = Math.min(
     MAX_COLD_FAMILIARITY_BONUS,
     state.coldFamiliarity * COLD_FAMILIARITY_RATE_BONUS
@@ -261,7 +296,7 @@ export function getColdRate(state: GameState, atCamp = true): number {
   );
   const windbreak = atCamp ? getWindbreakProtection(state) : 0;
 
-  return COLD_RATE * phaseMultiplier * (1 - familiarityBonus - shoreSenseBonus) * (1 - windbreak);
+  return COLD_RATE * phaseMultiplier * getWetnessMultiplier(state) * (1 - familiarityBonus - shoreSenseBonus) * (1 - windbreak);
 }
 
 export function getSunWarmRate(state: GameState): number {
@@ -316,6 +351,20 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   let firekeepingXp = state.firekeepingXp;
   let maxFirekeepingLevel = state.maxFirekeepingLevel;
   let fuelSourceKnown = state.fuelSourceKnown;
+  // Wetness: builds through night humidity, dries in full sun
+  let wetness = state.wetness;
+  const phase = getExposurePhase(state);
+  if (phase === "night") {
+    wetness = Math.min(100, wetness + WETNESS_NIGHT_RATE * seconds);
+  } else if (phase === "sunset") {
+    wetness = Math.min(100, wetness + WETNESS_SUNSET_RATE * seconds);
+  } else if (getTimeInDay(state) >= getDawnEnd(state)) {
+    wetness = Math.max(0, wetness - WETNESS_DRY_RATE * seconds);
+  }
+  if (activity === "swimming") {
+    wetness = Math.min(100, wetness + WETNESS_SWIM_AMOUNT);
+  }
+
   const coldRate = getColdRate(state, atCamp);
   const heatRate = getHeatRate(state, atCamp);
   let innerWarmth = state.innerWarmth + (heatRate - coldRate) * seconds;
@@ -326,6 +375,9 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   }
   if (innerWarmth < COMFORT_WARMTH) {
     innerWarmth = Math.min(COMFORT_WARMTH, innerWarmth + getFireWarmRate(state, atCamp) * seconds);
+  }
+  if (atCamp && state.fireStrength > 0) {
+    wetness = Math.max(0, wetness - FIRE_DRY_RATE * seconds);
   }
   if (activity === "swimming") {
     innerWarmth = Math.max(SWIM_COOL_TARGET, innerWarmth - SWIM_COOL_RATE * seconds);
@@ -403,6 +455,7 @@ export function runTick(state: GameState, seconds = 1, activity: Activity = "sca
   return {
     ...state,
     innerWarmth,
+    wetness,
     thirst,
     food,
     foundWood,
@@ -439,6 +492,7 @@ export function resetCycle(state: GameState): GameState {
     ...state,
     cycle: state.cycle + 1,
     innerWarmth: STARTING_WARMTH,
+    wetness: 0,
     thirst: STARTING_THIRST,
     food: STARTING_FOOD,
     foundWood: 0,

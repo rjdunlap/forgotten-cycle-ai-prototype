@@ -8,6 +8,8 @@ import {
   FOOD_FOUND,
   SWIM_COOL_TARGET,
   SURF_PREDATOR_CHANCE_PER_SECOND,
+  NIGHT_PREDATOR_CHANCE_PER_SECOND,
+  SUNSET_PREDATOR_CHANCE_PER_SECOND,
   WATER_FOUND,
   type Activity,
   canReset,
@@ -116,6 +118,7 @@ const els = {
   dbgThirst: requiredElement<HTMLElement>("#dbgThirst"),
   dbgFood: requiredElement<HTMLElement>("#dbgFood"),
   dbgPhase: requiredElement<HTMLElement>("#dbgPhase"),
+  dbgWetness: requiredElement<HTMLElement>("#dbgWetness"),
   dbgCtdShown: requiredElement<HTMLElement>("#dbgCtdShown"),
   dbgCtdCond: requiredElement<HTMLElement>("#dbgCtdCond"),
   dbgDeathShown: requiredElement<HTMLElement>("#dbgDeathShown"),
@@ -336,6 +339,7 @@ function render(): void {
     els.dbgThirst.textContent = state.thirst.toFixed(1);
     els.dbgFood.textContent = state.food.toFixed(1);
     els.dbgPhase.textContent = getExposurePhase(state);
+    els.dbgWetness.textContent = state.wetness.toFixed(1);
     els.dbgCtdShown.textContent = String(closeToDeathShown);
     els.dbgCtdCond.textContent = String(isCloseToDeath(state));
     els.dbgDeathShown.textContent = String(deathShown);
@@ -371,6 +375,17 @@ function tick(now: number): void {
     if (activeActivity === "swimming" && state.alive && Math.random() < elapsed * SURF_PREDATOR_CHANCE_PER_SECOND) {
       state = { ...state, alive: false, deathCause: "surf" };
       addLog("A dark shape rolls under the green water. The surf closes over you before you can draw breath.");
+    }
+
+    const fireOut = currentSite !== "camp" || state.fireStrength <= 0;
+    const phase = getExposurePhase(state);
+    if (state.alive && phase === "night" && fireOut && Math.random() < elapsed * NIGHT_PREDATOR_CHANCE_PER_SECOND) {
+      state = { ...state, alive: false, deathCause: "predator" };
+      addLog("Something moves at the edge of the dark. Fast. Low. Gone before you understand what happened.");
+    }
+    if (state.alive && phase === "sunset" && currentSite !== "camp" && Math.random() < elapsed * SUNSET_PREDATOR_CHANCE_PER_SECOND) {
+      state = { ...state, alive: false, deathCause: "predator" };
+      addLog("The light goes wrong just before it happens. You don't see it. You only feel the weight.");
     }
 
     lastExposurePhase = getExposurePhase(state);
@@ -814,12 +829,14 @@ function getFirekeepingLevelMessage(level: number): string {
 function getBodyTemperatureLabel(bodyTemperature: number, systemKnown = hasSystemReadout()): string {
   if (!systemKnown) {
     if (bodyTemperature <= 0) return "cold";
-    if (bodyTemperature >= MAX_WARMTH) return "fevered";
+    if (bodyTemperature >= MAX_WARMTH) return "dead";
     if (bodyTemperature < 25) return "numb";
     if (bodyTemperature < 40) return "shivering";
-    if (bodyTemperature < 62) return "steady";
-    if (bodyTemperature < 78) return "overwarm";
-    return "burning";
+    if (bodyTemperature < 60) return "steady";
+    if (bodyTemperature < 75) return "flushed";
+    if (bodyTemperature < 88) return "searing";
+    if (bodyTemperature < 97) return "burning";
+    return "collapse";
   }
 
   const offset = Math.round(bodyTemperature - COMFORT_WARMTH);
