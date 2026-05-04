@@ -5,6 +5,7 @@ import {
   MAX_WINDBREAK,
   WINDBREAK_WOOD_COST,
   COMFORT_WARMTH,
+  SWIM_COOL_TARGET,
   type Activity,
   canReset,
   createGameState,
@@ -82,8 +83,12 @@ const els = {
   windbreakDetail: requiredElement<HTMLElement>("#windbreakDetail"),
   windbreakStatus: requiredElement<HTMLElement>("#windbreakStatus"),
   windbreakProgressBar: requiredElement<HTMLElement>("#windbreakProgressBar"),
+  swimButton: requiredElement<HTMLButtonElement>("#swimButton"),
+  swimStatus: requiredElement<HTMLElement>("#swimStatus"),
   placesSection: requiredElement<HTMLElement>("#placesSection"),
   campSiteButton: requiredElement<HTMLButtonElement>("#campSiteButton"),
+  campSiteTitle: requiredElement<HTMLElement>("#campSiteTitle"),
+  campSiteDetail: requiredElement<HTMLElement>("#campSiteDetail"),
   wreckSiteButton: requiredElement<HTMLButtonElement>("#wreckSiteButton"),
   tidePlaceButton: requiredElement<HTMLButtonElement>("#tidePlaceButton"),
   junglePlaceButton: requiredElement<HTMLButtonElement>("#junglePlaceButton"),
@@ -118,11 +123,13 @@ type Site = "camp" | "wreckage" | "tide" | "jungle";
 
 let state = createGameState();
 let activity: Activity = "orienting";
-let currentSite: Site = "camp";
+let currentSite: Site = "tide";
 let speedMultiplier = 1;
 let lastTick = performance.now();
 let deathShown = false;
 let closeToDeathShown = false;
+let campDiscovered = false;
+let campVisited = false;
 let fuelDiscoveryLogged = false;
 let firstFireLogged = false;
 let firstWindbreakLogged = false;
@@ -161,10 +168,11 @@ function render(): void {
   const tendFireTime = getTendFireTime(state);
   const buildWindbreakTime = getBuildWindbreakTime(state);
   const woodFound = getWoodFound(state);
-  const coldRate = getColdRate(state);
-  const heatRate = getHeatRate(state);
+  const atCamp = currentSite === "camp";
+  const coldRate = getColdRate(state, atCamp);
+  const heatRate = getHeatRate(state, atCamp);
   const sunWarmRate = getSunWarmRate(state);
-  const fireWarmRate = getFireWarmRate(state);
+  const fireWarmRate = getFireWarmRate(state, atCamp);
   const shoreSenseLevel = getShoreSenseLevel(state);
   const shoreSenseMasteryBonus = getShoreSenseMasteryBonus(state);
   const scavengeLevel = getScavengeLevel(state);
@@ -185,7 +193,11 @@ function render(): void {
   const wreckKnown = hasWreckageSiteReadout();
   const tidePlaceKnown = hasTidePlaceReadout();
   const junglePlaceKnown = hasJunglePlaceReadout();
-  const placesKnown = wreckKnown || tidePlaceKnown || junglePlaceKnown || currentSite !== "camp";
+  const placesKnown =
+    (campDiscovered && currentSite !== "camp") ||
+    (wreckKnown && currentSite !== "wreckage") ||
+    (tidePlaceKnown && currentSite !== "tide") ||
+    (junglePlaceKnown && currentSite !== "jungle");
   const systemKnown = hasSystemReadout();
 
   els.cycle.textContent = `Entry ${toRoman(state.cycle)}`;
@@ -205,7 +217,9 @@ function render(): void {
   els.fireSupplyRow.hidden = !fireKnown;
   els.windbreakSupplyRow.hidden = !windbreakKnown;
   els.placesSection.hidden = !placesKnown;
-  els.campSiteButton.hidden = currentSite === "camp";
+  els.campSiteButton.hidden = !campDiscovered || currentSite === "camp";
+  els.campSiteTitle.textContent = campVisited ? "Return to Camp" : "Set Up Camp";
+  els.campSiteDetail.textContent = campVisited ? "The sheltered hollow above the wrack line." : "Make use of the hollow you marked above the tide-line.";
   els.wreckSiteButton.hidden = !wreckKnown || currentSite === "wreckage";
   els.tidePlaceButton.hidden = !tidePlaceKnown || currentSite === "tide";
   els.junglePlaceButton.hidden = !junglePlaceKnown || currentSite === "jungle";
@@ -257,6 +271,11 @@ function render(): void {
   els.fireProgressBar.style.width = `${state.fireStrength > 0 ? firePercent : tendPercent}%`;
 
   els.windbreakButton.hidden = !windbreakKnown || !isActionAvailableAtSite("sheltering");
+
+  els.swimButton.hidden = !hasTidePlaceReadout() || !isActionAvailableAtSite("swimming");
+  els.swimButton.disabled = !state.alive;
+  els.swimButton.setAttribute("aria-pressed", String(activity === "swimming"));
+  els.swimStatus.textContent = getActionStatus("swimming");
   els.windbreakButton.disabled =
     !state.alive || !state.fuelSourceKnown || state.foundWood < WINDBREAK_WOOD_COST || state.windbreakStrength >= MAX_WINDBREAK;
   els.windbreakButton.setAttribute("aria-pressed", String(activity === "sheltering"));
@@ -310,7 +329,7 @@ function tick(now: number): void {
     const previousExposurePhase = lastExposurePhase;
     const previousJungleThreat = getJungleThreat(state);
     const activeActivity = isActionAvailableAtSite(activity) ? activity : "orienting";
-    state = runTick(state, elapsed, activeActivity);
+    state = runTick(state, elapsed, activeActivity, currentSite === "camp");
     lastExposurePhase = getExposurePhase(state);
 
     if (!knewFuelSource && state.fuelSourceKnown && !fuelDiscoveryLogged) {
@@ -330,6 +349,10 @@ function tick(now: number): void {
 
     if (state.shoreSenseXp > previousShoreSenseXp) {
       addLog(getShoreSenseCompletionMessage(previousShoreSenseLevel, getShoreSenseLevel(state), state.shoreSenseXp));
+      if (!campDiscovered && previousShoreSenseLevel < 3 && getShoreSenseLevel(state) >= 3) {
+        campDiscovered = true;
+        addLog("Above the tide-line, a rock shelf out of the direct wind. A place where a fire could last the night. You mark it.");
+      }
     }
 
     if (state.foundWood > previousWood) {
@@ -423,6 +446,15 @@ els.windbreakButton.addEventListener("click", () => {
   render();
 });
 
+els.swimButton.addEventListener("click", () => {
+  if (!state.alive) return;
+  if (!isActionAvailableAtSite("swimming")) return;
+
+  activity = "swimming";
+  addLog("You wade into the surf until the cold water reaches your chest.");
+  render();
+});
+
 els.campSiteButton.addEventListener("click", () => {
   goToSite("camp");
 });
@@ -455,7 +487,9 @@ els.wakeButton.addEventListener("click", () => {
   const nextColdFamiliarity = state.coldFamiliarity + 1;
   state = resetCycle(state);
   activity = "orienting";
-  currentSite = "camp";
+  currentSite = "tide";
+  campDiscovered = false;
+  campVisited = false;
   fuelDiscoveryLogged = state.fuelSourceKnown;
   firstFireLogged = false;
   firstWindbreakLogged = false;
@@ -464,6 +498,7 @@ els.wakeButton.addEventListener("click", () => {
   deathShown = false;
   closeToDeathShown = false;
   els.deathDialog.close();
+  els.log.replaceChildren();
   addLogs(getWakeMessages(nextFuelRecognition, nextColdFamiliarity, rememberedFuelSource));
   render();
 
@@ -492,11 +527,10 @@ els.dejaVuButton.addEventListener("click", () => {
 function getActivitySummary(): string {
   if (speedMultiplier === 0) return "Paused";
   if (!state.alive) return "Ended";
-  if (!hasLogReadout()) return "The shore is bright.";
-  if (!hasFuelReadout()) return "An entry is forming.";
   if (activity === "orienting") return getSiteSummary();
   if (activity === "scavenging") return "Sorting the wreckage.";
   if (activity === "sheltering") return "Raising a windbreak.";
+  if (activity === "swimming") return "In the water.";
   return state.fireStrength > 0 ? "Keeping the dark back." : "Making a first fire.";
 }
 
@@ -512,6 +546,7 @@ function goToSite(site: Site): void {
 
   const previousSite = currentSite;
   currentSite = site;
+  if (site === "camp") campVisited = true;
   activity = getDefaultActivityForSite(site);
   addLog(getSiteTravelMessage(previousSite, site));
   render();
@@ -526,6 +561,7 @@ function isActionAvailableAtSite(action: Activity): boolean {
   if (action === "orienting") return true;
   if (action === "scavenging") return currentSite === "wreckage";
   if (action === "tending" || action === "sheltering") return currentSite === "camp";
+  if (action === "swimming") return currentSite === "tide";
   return false;
 }
 
@@ -794,6 +830,9 @@ function getActionStatus(action: Activity): string {
   }
   if (action === "sheltering" && activity !== action) {
     return "Idle";
+  }
+  if (action === "swimming" && activity !== action) {
+    return `Cools to ${SWIM_COOL_TARGET}`;
   }
   return activity === action ? "Active" : "Idle";
 }

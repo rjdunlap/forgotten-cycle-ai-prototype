@@ -108,7 +108,11 @@ Appears at the beginning of the second life onward, just after waking — before
 
 > **Deja Vu**
 >
-> Even while remembering little, you seem to learn things faster than normal people. Strange. Also, you found a book in your pocket. It seems to be a journal of some sort.
+> The shore again. Your hands move toward the wreckage before your eyes have finished opening.
+>
+> The smell of brine and wet wood. The pull and drag of the surf. Your body has already catalogued them.
+>
+> Something in your coat pocket. A small book. The handwriting inside is yours. You do not remember writing it.
 
 This is the first hint of the logbook system. The player does not interact with the journal yet — it is flavor that seeds future logbook reveals. Dismiss to continue.
 

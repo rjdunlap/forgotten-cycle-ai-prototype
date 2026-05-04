@@ -70,7 +70,6 @@
       <section class="grid gap-2.5 border border-ember-line bg-ember-panel p-3.5" aria-label="Available actions">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">Actions</p>
             <h2 class="text-base font-bold">Shore Actions</h2>
           </div>
           <p id="activitySummary" class="max-w-[150px] text-right text-[0.78rem] text-ember-muted">Current: reading the shore</p>
@@ -128,13 +127,23 @@
           </span>
         </button>
 
+        <button id="swimButton" class="action-card" type="button" hidden>
+          <span class="flex items-start justify-between gap-3">
+            <span>
+              <strong class="block text-sm">Wade In</strong>
+              <span class="block text-xs font-normal text-ember-muted">The surf will pull the heat out of you.</span>
+            </span>
+            <span id="swimStatus" class="text-xs text-ember-muted">Cools to 25</span>
+          </span>
+        </button>
+
         <div id="placesSection" class="grid gap-2 border-t border-ember-line pt-2" hidden>
           <p class="text-[0.68rem] font-extrabold uppercase text-ember-muted">Places</p>
           <button id="campSiteButton" class="action-card" type="button" hidden>
             <span class="flex items-start justify-between gap-3">
               <span>
-                <strong class="block text-sm">Return to Camp</strong>
-                <span class="block text-xs font-normal text-ember-muted">Go back to the fire, the shelter, and the place you woke.</span>
+                <strong id="campSiteTitle" class="block text-sm">Set Up Camp</strong>
+                <span id="campSiteDetail" class="block text-xs font-normal text-ember-muted">The sheltered hollow above the wrack line.</span>
               </span>
               <span class="text-xs text-ember-muted">Go</span>
             </span>
@@ -169,12 +178,11 @@
         </div>
       </section>
 
-      <section id="logSection" class="grid gap-2 border border-ember-line bg-ember-panel p-3" aria-label="Log entry" hidden>
+      <section id="logSection" class="flex flex-col gap-2 border border-ember-line bg-ember-panel p-3 max-h-[480px]" aria-label="Log entry" hidden>
         <div class="border-b border-ember-line pb-2">
-          <p class="mb-0.5 text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">Log Entry</p>
           <strong id="cycle" class="block text-base leading-tight text-ember-text">Entry I</strong>
         </div>
-        <ol id="log" class="min-h-24 max-h-[238px] space-y-1.5 overflow-auto py-1 pl-4 pr-1 text-[0.86rem] text-ember-muted" aria-label="Activity log"></ol>
+        <ol id="log" class="min-h-0 flex-1 space-y-1.5 overflow-auto py-1 pl-4 pr-1 text-[0.86rem] text-ember-muted" aria-label="Activity log"></ol>
       </section>
     </main>
 
@@ -242,8 +250,9 @@
         <div class="grid gap-2">
           <p class="text-[0.72rem] font-extrabold uppercase text-ember-accent-strong">The First Ember</p>
           <h2 class="text-xl font-bold leading-tight">Deja Vu</h2>
-          <p class="text-sm text-ember-muted">Even while remembering little, you seem to learn things faster than normal people. Strange.</p>
-          <p class="text-sm text-ember-muted">Also, you found a book in your pocket. It seems to be a journal of some sort.</p>
+          <p class="text-sm text-ember-muted">The shore again. Your hands move toward the wreckage before your eyes have finished opening.</p>
+          <p class="text-sm text-ember-muted">The smell of brine and wet wood. The pull and drag of the surf. Your body has already catalogued them.</p>
+          <p class="text-sm text-ember-muted">Something in your coat pocket. A small book. The handwriting inside is yours. You do not remember writing it.</p>
         </div>
         <button id="dejaVuButton" type="button">Continue</button>
       </div>
